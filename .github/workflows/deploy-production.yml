@@ -1,0 +1,63 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Backup database
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            cd /opt/project-management-saas
+            ./scripts/backup.sh
+      
+      - name: Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            cd /opt/project-management-saas
+            docker compose -f docker-compose.production.yml pull
+            docker compose -f docker-compose.production.yml up -d
+            docker compose -f docker-compose.production.yml exec -T backend python manage.py migrate --no-input
+            docker compose -f docker-compose.production.yml exec -T backend python manage.py collectstatic --no-input
+            docker image prune -f
+      
+      - name: Health check
+        run: |
+          for i in {1..30}; do
+            if curl -f https://yourdomain.com/api/health/; then
+              echo "Health check passed"
+              exit 0
+            fi
+            echo "Waiting... attempt $i"
+            sleep 5
+          done
+          exit 1
+      
+      - name: Rollback on failure
+        if: failure()
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            cd /opt/project-management-saas
+            docker compose -f docker-compose.production.yml down
+            ./scripts/restore-backup.sh
+            docker compose -f docker-compose.production.yml up -d

@@ -1,0 +1,7 @@
+-r base.txt
+
+# Monitoring
+sentry-sdk==2.14.0
+
+# Logging
+python-json-logger==2.0.7

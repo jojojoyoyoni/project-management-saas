@@ -1,0 +1,35 @@
+# Django 5.0.x (compatible with all our packages)
+Django==5.0.9
+djangorestframework==3.15.2
+
+# Authentication
+djangorestframework-simplejwt==5.3.1
+django-cors-headers==4.4.0
+
+# Database
+psycopg2-binary==2.9.9
+django-extensions==3.2.3
+
+# Filtering & Pagination
+django-filter==24.3
+drf-spectacular==0.27.2
+
+# Cache
+django-redis==5.4.0
+
+# WebSocket
+channels==4.0.0
+channels-redis==4.2.0
+
+# Celery
+celery==5.4.0
+django-celery-beat==2.6.0
+
+# Utilities
+Pillow==10.4.0
+python-decouple==3.8
+boto3==1.35.36
+
+# Production
+gunicorn==23.0.0
+whitenoise==6.7.0
