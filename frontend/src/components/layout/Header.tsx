@@ -1,6 +1,10 @@
-import { FaRegBell, FaMagnifyingGlass } from 'react-icons/fa6'
+import { FaRegBell, FaMagnifyingGlass, FaSun, FaMoon } from 'react-icons/fa6'
+import { useTheme } from '@/context/ThemeContext'
 
 export default function Header() {
+  const { theme, toggleTheme } = useTheme()
+  const isDark = theme === 'dark'
+
   return (
     <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6">
       {/* Search Bar */}
@@ -17,13 +21,21 @@ export default function Header() {
 
       {/* Right Side Actions */}
       <div className="flex items-center space-x-4 ml-4">
+        {/* Dark Mode Toggle */}
+        <button
+          onClick={toggleTheme}
+          className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+        >
+          {isDark ? <FaSun className="h-5 w-5 text-yellow-400" /> : <FaMoon className="h-5 w-5" />}
+        </button>
+
         {/* Notifications */}
         <button className="relative p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
           <FaRegBell className="h-5 w-5" />
           <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800" />
         </button>
 
-        {/* User Avatar Placeholder */}
+        {/* User Avatar */}
         <button className="flex items-center space-x-3">
           <div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-bold">
             J
