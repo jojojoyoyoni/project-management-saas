@@ -15,3 +15,9 @@ REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
     "anon": "10000/hour",
     "user": "100000/hour",
 }
+#  Add this block below:
+from corsheaders.defaults import default_headers
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'x-organization-id',
+]

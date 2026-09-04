@@ -29,7 +29,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         
         return Project.objects.filter(
             organization_id=org_id,
-            members=self.request.user,
+        # Removed 'members=self.request.user' so all org members see all projects
         ).select_related("organization", "created_by", "default_assignee")
     
     def get_serializer_class(self):

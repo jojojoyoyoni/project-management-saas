@@ -1,7 +1,14 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 
+
 class TaskConsumer(AsyncWebsocketConsumer):
+    """
+    WebSocket for real-time task updates.
+    
+    When a task is updated, broadcast to all users viewing the project.
+    """
+    
     async def connect(self):
         self.user = self.scope["user"]
         if not self.user.is_authenticated:
@@ -25,7 +32,7 @@ class TaskConsumer(AsyncWebsocketConsumer):
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
-                    "type": "task_updated",
+                    "type": "task_update",
                     "task_id": data["task_id"],
                     "updates": data["updates"],
                     "user": self.user.get_full_name(),
@@ -36,14 +43,14 @@ class TaskConsumer(AsyncWebsocketConsumer):
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
-                    "type": "user_typing",
+                    "type": "typing",
                     "task_id": data["task_id"],
                     "user": self.user.get_full_name(),
                     "user_id": self.user.id,
                 },
             )
     
-    async def task_updated(self, event):
+    async def task_update(self, event):
         await self.send(text_data=json.dumps({
             "type": "task_update",
             "task_id": event["task_id"],
@@ -52,7 +59,7 @@ class TaskConsumer(AsyncWebsocketConsumer):
             "user_id": event["user_id"],
         }))
     
-    async def user_typing(self, event):
+    async def typing(self, event):
         await self.send(text_data=json.dumps({
             "type": "typing",
             "task_id": event["task_id"],

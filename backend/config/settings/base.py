@@ -192,3 +192,11 @@ LOGGING = {
         "level": "INFO",
     },
 }
+
+# Fix enum naming collision warning
+ENUM_NAME_OVERRIDES = {
+    "TaskStatus.Role": "projects_task_status_role",
+    "TaskPriority.Role": "projects_task_priority_role",
+    "ProjectMember.Role": "projects_project_member_role",
+    "OrganizationMember.Role": "organizations_org_member_role",
+}

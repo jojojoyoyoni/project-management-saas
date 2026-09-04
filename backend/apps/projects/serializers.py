@@ -22,20 +22,29 @@ class ProjectListSerializer(serializers.ModelSerializer):
     """
     task_count = serializers.SerializerMethodField()
     member_count = serializers.SerializerMethodField()
+    active_tasks = serializers.SerializerMethodField()
+    completed_tasks = serializers.SerializerMethodField()
     
     class Meta:
         model = Project
         fields = [
             "id", "name", "key", "description", "status", "priority",
             "start_date", "end_date", "task_count", "member_count",
-            "created_at",
+            "active_tasks", "completed_tasks", "created_at",
         ]
     
     def get_task_count(self, obj):
-        return obj.task_count()
+        return obj.tasks.count()
     
     def get_member_count(self, obj):
-        return obj.member_count()
+        return obj.members.count()
+    
+    def get_active_tasks(self, obj):
+        # Any task that is NOT in the 'done' status
+        return obj.tasks.exclude(status__slug="done").count()
+    
+    def get_completed_tasks(self, obj):
+        return obj.tasks.filter(status__slug="done").count()
 
 
 class ProjectDetailSerializer(ProjectListSerializer):
