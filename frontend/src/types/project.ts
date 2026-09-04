@@ -17,6 +17,8 @@ export interface Project {
   status: 'active' | 'archived' | 'on_hold'
   priority: 'low' | 'medium' | 'high' | 'critical'
   organization: string
+  active_tasks: number;       // <-- ADD THIS
+  completed_tasks: number;  
   created_at: string
 }
 

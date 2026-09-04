@@ -2,31 +2,47 @@ import { useState, useEffect } from 'react'
 import { DndContext, closestCorners, type DragEndEvent } from '@dnd-kit/core'
 import { useTasks, useUpdateTaskStatus } from '@/api/hooks/useTasks'
 import KanbanColumn from './KanbanColumn'
+import TaskForm from './TaskForm'
+import Modal from '@/components/common/Modal' // Adjust path if needed
+import Button from '@/components/common/Button' // Adjust path if needed
 import Spinner from '@/components/common/Spinner'
 import type { Task, TaskStatus } from '@/types/task'
 
 const COLUMNS: { id: TaskStatus; title: string }[] = [
-  { id: 'TODO', title: 'To Do' },
-  { id: 'IN_PROGRESS', title: 'In Progress' },
-  { id: 'DONE', title: 'Done' },
+  { id: 'to-do', title: 'To Do' },
+  { id: 'in-progress', title: 'In Progress' },
+  { id: 'done', title: 'Done' },
 ]
 
-export default function KanbanBoard() {
-  const { data, isLoading, isError } = useTasks()
+interface KanbanBoardProps {
+  projectId: string
+}
+
+export default function KanbanBoard({ projectId }: KanbanBoardProps) {
+  const { data, isLoading, isError } = useTasks(projectId)
   const updateStatus = useUpdateTaskStatus()
+  const [isModalOpen, setIsModalOpen] = useState(false) // <-- Modal state
+
   
-  // Local state to manage drag-and-drop visuals instantly
   const [localTasks, setLocalTasks] = useState<Record<TaskStatus, Task[]>>({
-    TODO: [], IN_PROGRESS: [], DONE: []
+    'to-do': [], 
+    'in-progress': [], 
+    'done': []
   })
 
-  // Sync React Query data to local state
   useEffect(() => {
     if (data?.results) {
-      const grouped: Record<TaskStatus, Task[]> = { TODO: [], IN_PROGRESS: [], DONE: [] }
+      const grouped: Record<TaskStatus, Task[]> = {
+        'to-do': [], 
+        'in-progress': [], 
+        'done': []
+      }
+      
       data.results.forEach(task => {
-        if (grouped[task.status]) {
-          grouped[task.status].push(task)
+        const statusSlug = task.status?.slug
+        
+        if (statusSlug && grouped[statusSlug]) {
+          grouped[statusSlug].push(task)
         }
       })
       setLocalTasks(grouped)
@@ -37,59 +53,72 @@ export default function KanbanBoard() {
     const { active, over } = event
     if (!over) return
 
-    const taskId = active.id as string
+    // Force IDs to strings for safe comparison
+    const taskId = String(active.id)
+    const overId = String(over.id)
+
     let targetColumn: TaskStatus | null = null
 
-    // Find which column the task was dropped into
     for (const col of COLUMNS) {
-      if (localTasks[col.id].some(t => t.id === taskId) || col.id === over.id) {
-        // If dropped directly on a column header
-        if (col.id === over.id && !localTasks[col.id].some(t => t.id === taskId)) {
-          targetColumn = col.id
-          break
-        }
-        // If dropped on another task within a column
-        if (localTasks[col.id].some(t => t.id === over.id)) {
-          targetColumn = col.id
-          break
-        }
+      // Check if dropped on the column itself, or on a task inside the column
+      if (col.id === overId || localTasks[col.id]?.some(t => String(t.id) === overId)) {
+        targetColumn = col.id
+        break
       }
     }
 
     if (!targetColumn) return
 
-    // Find the task
-    let movedTask: Task | undefined
     const sourceColumn = Object.keys(localTasks).find(col => 
-      localTasks[col as TaskStatus].some(t => t.id === taskId)
+      localTasks[col as TaskStatus]?.some(t => String(t.id) === taskId)
     ) as TaskStatus | undefined
 
-    if (!sourceColumn) return
-    movedTask = localTasks[sourceColumn].find(t => t.id === taskId)
+    if (!sourceColumn || sourceColumn === targetColumn) return
 
-    if (!movedTask || sourceColumn === targetColumn) return
+    const movedTask = localTasks[sourceColumn]?.find(t => String(t.id) === taskId)
+    if (!movedTask) return
 
-    // Update local state instantly for smooth UI
+    // Optimistic UI update
     setLocalTasks(prev => ({
       ...prev,
-      [sourceColumn]: prev[sourceColumn].filter(t => t.id !== taskId),
-      [targetColumn]: [...prev[targetColumn], movedTask!]
+      [sourceColumn]: prev[sourceColumn].filter(t => String(t.id) !== taskId),
+      [targetColumn]: [...prev[targetColumn], { ...movedTask, status: { ...movedTask.status, slug: targetColumn } }]
     }))
 
-    // Send PATCH request to Django backend
-    updateStatus.mutate({ id: taskId, status: targetColumn })
+    // Send the string slug to Django
+    updateStatus.mutate({ projectId, taskId, status: targetColumn })
   }
 
   if (isLoading) return <div className="flex justify-center py-12"><Spinner /></div>
-  if (isError) return <div className="text-center py-12 text-red-500">Failed to load tasks. Is the Django backend running?</div>
+  if (isError) return <div className="text-center py-12 text-red-500">Failed to load tasks.</div>
 
   return (
-    <DndContext collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
-      <div className="flex gap-6 overflow-x-auto pb-4 h-full">
-        {COLUMNS.map(col => (
-          <KanbanColumn key={col.id} title={col.title} tasks={localTasks[col.id]} />
-        ))}
+   <div className="h-full flex flex-col">
+      {/* Header with Add Button */}
+      <div className="flex justify-end mb-4">
+        <Button onClick={() => setIsModalOpen(true)}>
+          + Add Task
+        </Button>
       </div>
-    </DndContext>
+
+      <DndContext collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
+        <div className="flex gap-6 overflow-x-auto pb-4 flex-1">
+          {COLUMNS.map(col => (
+            <KanbanColumn 
+              key={col.id} 
+              title={col.title} 
+              tasks={localTasks[col.id] || []} 
+            />
+          ))}
+        </div>
+      </DndContext>
+
+      {/* Task Creation Modal */}
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Create New Task">
+        <TaskForm projectId={projectId} onClose={() => setIsModalOpen(false)} />
+      </Modal>
+    </div>
+  
   )
 }
+

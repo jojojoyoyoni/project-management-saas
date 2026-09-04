@@ -8,6 +8,7 @@ interface TaskCardProps {
 }
 
 export default function TaskCard({ task }: TaskCardProps) {
+  // dnd-kit sometimes prefers string IDs
   const {
     attributes,
     listeners,
@@ -15,18 +16,23 @@ export default function TaskCard({ task }: TaskCardProps) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id })
+  } = useSortable({ id: String(task.id) })
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
   }
 
-  const priorityColor = {
-    LOW: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
-    MEDIUM: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-    HIGH: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  const priorityColor: Record<string, string> = {
+    low: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+    medium: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+    high: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    critical: 'bg-red-500 text-white dark:bg-red-600 dark:text-white',
   }
+
+  // Safely extract the slug and name so we never pass an object to JSX
+  const prioritySlug = task.priority?.slug || ''
+  const priorityName = task.priority?.name || 'No Priority'
 
   return (
     <div
@@ -39,12 +45,22 @@ export default function TaskCard({ task }: TaskCardProps) {
       {...attributes}
       {...listeners}
     >
+      {/* Optional: Show the Task Key like PROJ-1-4 */}
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-mono text-gray-500 dark:text-gray-400">
+          {task.key}
+        </span>
+      </div>
+
       <div className="flex items-start justify-between">
         <p className="text-sm font-medium text-gray-900 dark:text-white flex-1">
           {task.title}
         </p>
-        <span className={clsx('text-xs font-medium px-2 py-0.5 rounded-full ml-2', priorityColor[task.priority])}>
-          {task.priority}
+        <span className={clsx(
+          'text-xs font-medium px-2 py-0.5 rounded-full ml-2', 
+          priorityColor[prioritySlug] || 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+        )}>
+          {priorityName}
         </span>
       </div>
       

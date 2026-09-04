@@ -6,10 +6,14 @@ interface StatsCardsProps {
 }
 
 export default function StatsCards({ projects }: StatsCardsProps) {
+  // Calculate totals from the projects array
+  const activeTasks = projects.reduce((sum, p) => sum + (p.active_tasks || 0), 0)
+  const completedTasks = projects.reduce((sum, p) => sum + (p.completed_tasks || 0), 0)
+
   const stats = [
     { name: 'Total Projects', value: projects.length, icon: FaFolderOpen, color: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' },
-    { name: 'Active Tasks', value: '-', icon: FaListCheck, color: 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' },
-    { name: 'Completed', value: '-', icon: FaCircleCheck, color: 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400' },
+    { name: 'Active Tasks', value: activeTasks, icon: FaListCheck, color: 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' },
+    { name: 'Completed', value: completedTasks, icon: FaCircleCheck, color: 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400' },
     { name: 'Overdue', value: '0', icon: FaTriangleExclamation, color: 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400' },
   ]
 
