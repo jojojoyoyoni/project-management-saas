@@ -5,10 +5,10 @@ import clsx from 'clsx'
 
 interface TaskCardProps {
   task: Task
+  onClick?: (taskId: string) => void
 }
 
-export default function TaskCard({ task }: TaskCardProps) {
-  // dnd-kit sometimes prefers string IDs
+export default function TaskCard({ task, onClick }: TaskCardProps) {
   const {
     attributes,
     listeners,
@@ -30,7 +30,6 @@ export default function TaskCard({ task }: TaskCardProps) {
     critical: 'bg-red-500 text-white dark:bg-red-600 dark:text-white',
   }
 
-  // Safely extract the slug and name so we never pass an object to JSX
   const prioritySlug = task.priority?.slug || ''
   const priorityName = task.priority?.name || 'No Priority'
 
@@ -39,20 +38,26 @@ export default function TaskCard({ task }: TaskCardProps) {
       ref={setNodeRef}
       style={style}
       className={clsx(
-        'bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md transition-shadow',
+        'bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow relative',
         isDragging && 'opacity-50 shadow-lg rotate-2'
       )}
       {...attributes}
-      {...listeners}
+      // Put the click handler on the main div
+      onClick={() => onClick?.(String(task.id))}
     >
-      {/* Optional: Show the Task Key like PROJ-1-4 */}
-      <div className="flex items-center justify-between mb-2">
+      {/* Drag Handle Area - dnd-kit listeners go here */}
+      <div 
+        className="flex items-center justify-between mb-2 cursor-grab active:cursor-grabbing" 
+        {...listeners}
+      >
         <span className="text-xs font-mono text-gray-500 dark:text-gray-400">
           {task.key}
         </span>
+        {/* You could put a drag icon here if you want */}
       </div>
 
-      <div className="flex items-start justify-between">
+      {/* Clickable Content Area */}
+      <div className="flex items-start justify-between pointer-events-none">
         <p className="text-sm font-medium text-gray-900 dark:text-white flex-1">
           {task.title}
         </p>

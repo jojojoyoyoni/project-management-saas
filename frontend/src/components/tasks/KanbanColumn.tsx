@@ -5,10 +5,10 @@ import TaskCard from './TaskCard'
 interface KanbanColumnProps {
   title: string
   tasks: Task[]
+  onTaskClick?: (taskId: string) => void
 }
 
-// FIX: Added = [] default value so tasks is never undefined
-export default function KanbanColumn({ title, tasks = [] }: KanbanColumnProps) {
+export default function KanbanColumn({ title, tasks = [], onTaskClick }: KanbanColumnProps) {
   return (
     <div className="bg-gray-100 dark:bg-gray-800/50 rounded-xl p-4 w-80 flex-shrink-0 flex flex-col max-h-full">
       <div className="flex items-center justify-between mb-4">
@@ -21,10 +21,9 @@ export default function KanbanColumn({ title, tasks = [] }: KanbanColumnProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-3 min-h-[100px]">
-        {/* dnd-kit requires string IDs */}
         <SortableContext items={tasks.map(t => String(t.id))} strategy={verticalListSortingStrategy}>
           {tasks.map((task) => (
-            <TaskCard key={task.id} task={task} />
+            <TaskCard key={task.id} task={task} onClick={onTaskClick} />
           ))}
         </SortableContext>
         

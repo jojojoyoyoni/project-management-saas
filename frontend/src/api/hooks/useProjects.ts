@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { projectKeys, getProjects, createProject } from '@/api/queries/projectQueries'
+import { projectKeys, getProjects, createProject, getProjectMembers } from '@/api/queries/projectQueries'
 import { useAppSelector } from '@/store'
 import type { CreateProjectValues } from '@/types/project'
 
@@ -11,6 +11,16 @@ export const useProjects = () => {
     queryFn: () => getProjects(activeOrgId!),
     enabled: !!activeOrgId, 
     retry: 1,
+  })
+}
+
+
+// Add this hook
+export const useProjectMembers = (projectId: string | null) => {
+  return useQuery({
+    queryKey: ['projectMembers', projectId],
+    queryFn: () => getProjectMembers(projectId!),
+    enabled: !!projectId,
   })
 }
 

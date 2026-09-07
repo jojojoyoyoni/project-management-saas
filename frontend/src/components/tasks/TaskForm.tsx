@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useCreateTask } from '@/api/hooks/useTasks'
+import { useProjectMembers } from '@/api/hooks/useProjects'
+
 import Button from '@/components/common/Button' // Adjust import path if needed
 
 interface TaskFormProps {
@@ -12,9 +14,11 @@ export default function TaskForm({ projectId, onClose }: TaskFormProps) {
   const [description, setDescription] = useState('')
   const [status, setStatus] = useState('to-do')
   const [priority, setPriority] = useState('medium')
+  const [assignee, setAssignee] = useState('')
   const [dueDate, setDueDate] = useState('')
 
   const createTask = useCreateTask(projectId)
+  const { data: members } = useProjectMembers(projectId)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,6 +29,7 @@ export default function TaskForm({ projectId, onClose }: TaskFormProps) {
       description,
       status,       // Sends "to-do"
       priority,     // Sends "medium"
+      assignee: assignee || null, // Send User ID or null
       due_date: dueDate || null,
     }, {
       onSuccess: () => {
@@ -95,16 +100,32 @@ export default function TaskForm({ projectId, onClose }: TaskFormProps) {
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Due Date
-        </label>
-        <input
-          type="date"
-          value={dueDate}
-          onChange={(e) => setDueDate(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
-        />
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Assignee</label>
+          <select
+            value={assignee}
+            onChange={(e) => setAssignee(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">Unassigned</option>
+            {members?.map((m: any) => (
+              <option key={m.user.id} value={m.user.id}>
+                {m.user.first_name ? `${m.user.first_name} ${m.user.last_name}` : m.user.username}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Due Date</label>
+          <input
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
       </div>
 
       {createTask.isError && (

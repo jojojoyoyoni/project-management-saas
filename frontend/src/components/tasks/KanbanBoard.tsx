@@ -1,18 +1,15 @@
 import { useState, useEffect } from 'react'
-import { DndContext, closestCorners, type DragEndEvent } from '@dnd-kit/core'
-import { useTasks, useUpdateTaskStatus } from '@/api/hooks/useTasks'
+import { DndContext, closestCorners, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
+import { useTasks, useUpdateTaskStatus, useTaskStatuses } from '@/api/hooks/useTasks'
 import KanbanColumn from './KanbanColumn'
 import TaskForm from './TaskForm'
-import Modal from '@/components/common/Modal' // Adjust path if needed
-import Button from '@/components/common/Button' // Adjust path if needed
+import TaskDetail from './TaskDetail'
+import Modal from '@/components/common/Modal'
+import Button from '@/components/common/Button'
 import Spinner from '@/components/common/Spinner'
 import type { Task, TaskStatus } from '@/types/task'
 
-const COLUMNS: { id: TaskStatus; title: string }[] = [
-  { id: 'to-do', title: 'To Do' },
-  { id: 'in-progress', title: 'In Progress' },
-  { id: 'done', title: 'Done' },
-]
+// Removed hardcoded COLUMNS. Now they come from the database!
 
 interface KanbanBoardProps {
   projectId: string
@@ -20,105 +17,127 @@ interface KanbanBoardProps {
 
 export default function KanbanBoard({ projectId }: KanbanBoardProps) {
   const { data, isLoading, isError } = useTasks(projectId)
+  const { data: columns } = useTaskStatuses(projectId)
   const updateStatus = useUpdateTaskStatus()
-  const [isModalOpen, setIsModalOpen] = useState(false) // <-- Modal state
-
   
-  const [localTasks, setLocalTasks] = useState<Record<TaskStatus, Task[]>>({
-    'to-do': [], 
-    'in-progress': [], 
-    'done': []
-  })
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  
+  // localTasks is now a dynamic Record of slug -> Task[]
+  const [localTasks, setLocalTasks] = useState<Record<string, Task[]>>({})
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 10 } })
+  )
+
+  // Group tasks whenever tasks OR columns change
   useEffect(() => {
-    if (data?.results) {
-      const grouped: Record<TaskStatus, Task[]> = {
-        'to-do': [], 
-        'in-progress': [], 
-        'done': []
-      }
+    if (data?.results && columns) {
+      const grouped: Record<string, Task[]> = {}
       
+      // Initialize empty arrays for each column slug
+      columns.forEach((col: any) => {
+        grouped[col.slug] = []
+      })
+
+      // Put tasks in their respective columns
       data.results.forEach(task => {
         const statusSlug = task.status?.slug
-        
         if (statusSlug && grouped[statusSlug]) {
           grouped[statusSlug].push(task)
+        } else if (columns.length > 0) {
+          // Fallback: if a task has a status not in columns, put it in the first column
+          grouped[columns[0].slug]?.push(task)
         }
       })
       setLocalTasks(grouped)
     }
-  }, [data])
+  }, [data, columns])
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
-    if (!over) return
+    if (!over || !columns) return
 
-    // Force IDs to strings for safe comparison
     const taskId = String(active.id)
     const overId = String(over.id)
 
-    let targetColumn: TaskStatus | null = null
-
-    for (const col of COLUMNS) {
-      // Check if dropped on the column itself, or on a task inside the column
-      if (col.id === overId || localTasks[col.id]?.some(t => String(t.id) === overId)) {
-        targetColumn = col.id
+    // Find which column we dropped into
+    let targetColumnSlug: string | null = null
+    for (const col of columns) {
+      if (col.slug === overId || localTasks[col.slug]?.some(t => String(t.id) === overId)) {
+        targetColumnSlug = col.slug
         break
       }
     }
 
-    if (!targetColumn) return
+    if (!targetColumnSlug) return
 
-    const sourceColumn = Object.keys(localTasks).find(col => 
-      localTasks[col as TaskStatus]?.some(t => String(t.id) === taskId)
-    ) as TaskStatus | undefined
+    // Find which column the task came from
+    const sourceColumnSlug = Object.keys(localTasks).find(slug => 
+      localTasks[slug]?.some(t => String(t.id) === taskId)
+    )
 
-    if (!sourceColumn || sourceColumn === targetColumn) return
+    if (!sourceColumnSlug || sourceColumnSlug === targetColumnSlug) return
 
-    const movedTask = localTasks[sourceColumn]?.find(t => String(t.id) === taskId)
+    const movedTask = localTasks[sourceColumnSlug]?.find(t => String(t.id) === taskId)
     if (!movedTask) return
 
     // Optimistic UI update
-    setLocalTasks(prev => ({
-      ...prev,
-      [sourceColumn]: prev[sourceColumn].filter(t => String(t.id) !== taskId),
-      [targetColumn]: [...prev[targetColumn], { ...movedTask, status: { ...movedTask.status, slug: targetColumn } }]
-    }))
+    setLocalTasks(prev => {
+      // Safely copy the previous state
+      const newState = { ...prev }
+      
+      // Remove from source
+      newState[sourceColumnSlug] = (newState[sourceColumnSlug] || []).filter(
+        t => String(t.id) !== taskId
+      )
+       // Add to target
+      newState[targetColumnSlug] = [
+        ...(newState[targetColumnSlug] || []), 
+        { ...movedTask, status: { ...movedTask.status, slug: targetColumnSlug as TaskStatus } }
+      ]
+      
+      return newState
+    })
 
-    // Send the string slug to Django
-    updateStatus.mutate({ projectId, taskId, status: targetColumn })
+    // Send to Django
+      updateStatus.mutate({ projectId, taskId, status: targetColumnSlug as TaskStatus })
   }
+  
 
-  if (isLoading) return <div className="flex justify-center py-12"><Spinner /></div>
+  if (isLoading || !columns) return <div className="flex justify-center py-12"><Spinner /></div>
   if (isError) return <div className="text-center py-12 text-red-500">Failed to load tasks.</div>
 
   return (
-   <div className="h-full flex flex-col">
-      {/* Header with Add Button */}
+    <div className="h-full flex flex-col">
       <div className="flex justify-end mb-4">
-        <Button onClick={() => setIsModalOpen(true)}>
+        <Button onClick={() => setIsCreateModalOpen(true)}>
           + Add Task
         </Button>
       </div>
 
-      <DndContext collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
         <div className="flex gap-6 overflow-x-auto pb-4 flex-1">
-          {COLUMNS.map(col => (
+          {columns.map((col: any) => (
             <KanbanColumn 
               key={col.id} 
-              title={col.title} 
-              tasks={localTasks[col.id] || []} 
+              title={col.name} 
+              tasks={localTasks[col.slug] || []}
+              onTaskClick={(taskId) => setSelectedTaskId(taskId)} 
             />
           ))}
         </div>
       </DndContext>
 
-      {/* Task Creation Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Create New Task">
-        <TaskForm projectId={projectId} onClose={() => setIsModalOpen(false)} />
+      <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Create New Task">
+        <TaskForm projectId={projectId} onClose={() => setIsCreateModalOpen(false)} />
+      </Modal>
+
+      <Modal isOpen={!!selectedTaskId} onClose={() => setSelectedTaskId(null)} title="Task Details">
+        {selectedTaskId && (
+          <TaskDetail projectId={projectId} taskId={selectedTaskId} onClose={() => setSelectedTaskId(null)} />
+        )}
       </Modal>
     </div>
-  
   )
 }
-
