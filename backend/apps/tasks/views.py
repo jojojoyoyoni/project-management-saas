@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from django.db.models import Q
 from apps.users.models import User
 from apps.projects.models import Project
-from .models import Task, TaskComment, TaskAttachment, TaskActivity
+from .models import Task, TaskComment, TaskAttachment, TaskActivity, TaskStatus
 from .serializers import (
     TaskListSerializer,
     TaskDetailSerializer,
@@ -164,6 +164,20 @@ class TaskViewSet(viewsets.ModelViewSet):
         return Response({"success": True, "updated": updated})
 
 
+class TaskStatusViewSet(viewsets.ModelViewSet):
+    """Used by the frontend to fetch Kanban columns dynamically."""
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        queryset = TaskStatus.objects.all()
+        project_id = self.request.query_params.get('project')
+        if project_id:
+            queryset = queryset.filter(project_id=project_id)
+        return queryset
+
+    def get_serializer_class(self):
+        from .serializers import TaskStatusSerializer
+        return TaskStatusSerializer
 
 class TaskCommentViewSet(viewsets.ModelViewSet):
     """

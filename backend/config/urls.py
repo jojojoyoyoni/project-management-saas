@@ -4,6 +4,9 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.http import JsonResponse
 
+
+from apps.tasks.views import TaskStatusViewSet
+
 # Try to import docs, but don't fail if missing
 try:
     from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
@@ -50,6 +53,8 @@ urlpatterns += [
     path("api/organizations/<int:org_id>/projects/", include("apps.projects.urls")),
     path("api/projects/<int:project_id>/tasks/", include("apps.tasks.urls")),
     path("api/health/", include("core.urls")),
+    path('api/tasks/statuses/', TaskStatusViewSet.as_view({'get': 'list'})),
+
 ]
 
 if settings.DEBUG:
