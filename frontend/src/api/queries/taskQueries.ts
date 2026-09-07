@@ -78,3 +78,13 @@ export const getTaskStatuses = async (projectId: string) => {
   const res = await apiClient(`/tasks/statuses/?project=${projectId}`)
   return res.results || res
 }
+
+export const createTaskStatus = async ({ projectId, statusData }: { 
+  projectId: string; 
+  statusData: { name: string; color: string } 
+}) => {
+  return apiClient(`/tasks/statuses/`, {
+    method: 'POST',
+    body: JSON.stringify({ ...statusData, project: projectId }),
+  })
+}

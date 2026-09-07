@@ -115,6 +115,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
             "success": True,
             "members": ProjectMemberSerializer(members, many=True).data,
         })
+    @action(detail=True, methods=["get"])
+    def members(self, request, pk=None):
+        project = self.get_object()
+        members = project.member_records.all() # Uses the related_name from your model
+        serializer = ProjectMemberSerializer(members, many=True)
+        return Response(serializer.data)
     
     @action(detail=True, methods=["post"])
     def add_member(self, request, org_id=None, pk=None):

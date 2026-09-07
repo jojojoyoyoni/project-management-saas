@@ -16,11 +16,19 @@ export const useProjects = () => {
 
 
 // Add this hook
-export const useProjectMembers = (projectId: string | null) => {
+// export const useProjectMembers = (projectId: string | null) => {
+//   return useQuery({
+//     queryKey: ['projectMembers', projectId],
+//     queryFn: () => getProjectMembers(projectId!),
+//     enabled: !!projectId,
+//   })
+// }
+
+export const useProjectMembers = (orgId: string | null, projectId: string | null) => {
   return useQuery({
     queryKey: ['projectMembers', projectId],
-    queryFn: () => getProjectMembers(projectId!),
-    enabled: !!projectId,
+    queryFn: () => getProjectMembers(orgId!, projectId!),
+    enabled: !!orgId && !!projectId,
   })
 }
 

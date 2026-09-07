@@ -13,6 +13,33 @@ export const loginUser = async (data: LoginFormValues): Promise<AuthTokens> => {
   })
 }
 
-export const getCurrentUser = async (): Promise<User> => {
-  return apiClient('/auth/me/')
+
+// export const getCurrentUser = async () => {
+//   const res = await apiClient('/users/me/')
+//   return res.user // <-- Extract the user object here
+// }
+
+// export const updateUserProfile = async (userData: { first_name?: string; last_name?: string; avatar?: string }) => {
+//   // Assuming your backend has a /api/users/me/ endpoint for the current user
+//   const res = await apiClient('/users/me/', {
+//     method: 'PATCH',
+//     body: JSON.stringify(userData),
+//   })
+//   return res
+// }
+
+
+export const getCurrentUser = async () => {
+  // Change the URL to /auth/me/
+  const res = await apiClient('/auth/me/')
+  return res.user // Extract the user object from { success: true, user: {...} }
+}
+
+export const updateUserProfile = async (userData: { first_name?: string; last_name?: string; avatar?: string }) => {
+  // Change the URL to /auth/me/
+  const res = await apiClient('/auth/me/', {
+    method: 'PATCH',
+    body: JSON.stringify(userData),
+  })
+  return res.user
 }

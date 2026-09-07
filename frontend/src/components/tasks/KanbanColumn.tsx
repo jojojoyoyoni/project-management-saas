@@ -6,12 +6,15 @@ interface KanbanColumnProps {
   title: string
   tasks: Task[]
   onTaskClick?: (taskId: string) => void
+  color?: string 
 }
 
-export default function KanbanColumn({ title, tasks = [], onTaskClick }: KanbanColumnProps) {
+export default function KanbanColumn({ title, tasks = [], onTaskClick, color = '#6366f1' }: KanbanColumnProps) {
   return (
     <div className="bg-gray-100 dark:bg-gray-800/50 rounded-xl p-4 w-80 flex-shrink-0 flex flex-col max-h-full">
       <div className="flex items-center justify-between mb-4">
+        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }}></span>
+
         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
           {title}
         </h3>

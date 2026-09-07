@@ -12,6 +12,7 @@ const navigation = [
   { name: 'Projects', href: '/projects', icon: FaFolderOpen },
   { name: 'My Tasks', href: '/tasks', icon: FaListCheck },
   { name: 'Settings', href: '/settings', icon: FaGear },
+  
 ]
 
 export default function Sidebar() {

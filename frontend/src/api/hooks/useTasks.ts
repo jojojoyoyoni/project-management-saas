@@ -8,7 +8,8 @@ import {
   createTask, 
   getTaskActivities,
   deleteTask,
-  getTaskStatuses
+  getTaskStatuses,
+  createTaskStatus
 } from '@/api/queries/taskQueries'
 import type { TaskStatus } from '@/types/task'
 
@@ -89,12 +90,22 @@ export const useTaskActivities = (projectId: string | null, taskId: string | nul
   })
 }
 
-// Add this to the bottom of useTasks.ts
 
 export const useTaskStatuses = (projectId: string | null) => {
   return useQuery({
     queryKey: ['taskStatuses', projectId],
     queryFn: () => getTaskStatuses(projectId!),
     enabled: !!projectId,
+  })
+}
+
+export const useCreateTaskStatus = (projectId: string) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (statusData: { name: string; color: string }) => createTaskStatus({ projectId, statusData }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['taskStatuses', projectId] })
+    }
   })
 }

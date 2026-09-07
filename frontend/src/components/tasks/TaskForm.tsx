@@ -18,7 +18,7 @@ export default function TaskForm({ projectId, onClose }: TaskFormProps) {
   const [dueDate, setDueDate] = useState('')
 
   const createTask = useCreateTask(projectId)
-  const { data: members } = useProjectMembers(projectId)
+  const { data: members } = useProjectMembers(projectId, '')
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

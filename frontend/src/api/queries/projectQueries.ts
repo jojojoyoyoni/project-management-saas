@@ -11,10 +11,20 @@ export const getProjects = async (orgId: string): Promise<PaginatedResponse<Proj
 }
 
 // Add this to projectQueries.ts
-export const getProjectMembers = async (projectId: string) => {
-  const res = await apiClient(`/projects/${projectId}/members/`)
-  // Depending on your backend, it might return an array or { results: [...] }
-  return res.results || res
+// export const getProjectMembers = async (projectId: string) => {
+//   const res = await apiClient(`/projects/${projectId}/members/`)
+//   // Depending on your backend, it might return an array or { results: [...] }
+//   return res.results || res
+// }
+
+export const getProjectMembers = async (orgId: string, projectId: string) => {
+  try {
+    const res = await apiClient(`/organizations/${orgId}/projects/${projectId}/members/`)
+    return res.results || res
+  } catch (error) {
+    // If it fails, return empty array so the dropdown doesn't crash
+    return []
+  }
 }
 
 export const createProject = async (orgId: string, data: CreateProjectValues): Promise<Project> => {

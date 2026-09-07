@@ -18,6 +18,14 @@ export interface TaskPriorityObject {
   color: string
   order: number
 }
+// ADD THIS: A simple User interface for the assignee
+export interface AssigneeObject {
+  id: string | number
+  username: string
+  first_name?: string
+  last_name?: string
+  avatar?: string | null
+}
 
 export interface Task {
   id: string
@@ -26,7 +34,7 @@ export interface Task {
   status: TaskStatusObject
   priority: TaskPriorityObject
   project: string
-  assignee: string | null
+  assignee: AssigneeObject | null
   due_date: string | null
   task_number?: number
   key?: string

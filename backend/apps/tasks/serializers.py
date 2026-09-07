@@ -11,6 +11,9 @@ from apps.tasks.models import (
 
 
 class TaskStatusSerializer(serializers.ModelSerializer):
+     # Make slug optional so the frontend doesn't have to send it
+    slug = serializers.SlugField(required=False, allow_blank=True)
+
     class Meta:
         model = TaskStatus
         fields = ["id", "name", "slug", "order", "color", "is_default"]

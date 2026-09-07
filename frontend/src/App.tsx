@@ -6,6 +6,7 @@ import ProjectsPage from '@/pages/dashboard/ProjectsPage'
 import TasksPage from '@/pages/dashboard/TasksPage'
 import LoginPage from '@/pages/auth/LoginPage'
 import NotFoundPage from '@/pages/NotFoundPage'
+import SettingsPage from '@/pages/dashboard/SettingsPage'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated)
@@ -29,6 +30,8 @@ const router = createBrowserRouter([
       { index: true, element: <DashboardPage /> },
       { path: 'projects', element: <ProjectsPage /> },
       { path: 'tasks', element: <TasksPage /> },
+      // MOVE IT HERE: Inside the children of AppLayout
+      { path: 'settings', element: <SettingsPage /> },
     ],
   },
   {

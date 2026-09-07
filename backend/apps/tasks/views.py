@@ -165,9 +165,14 @@ class TaskViewSet(viewsets.ModelViewSet):
 
 
 class TaskStatusViewSet(viewsets.ModelViewSet):
-    """Used by the frontend to fetch Kanban columns dynamically."""
+    """Used by the frontend to fetch and manage Kanban columns."""
     permission_classes = [IsAuthenticated]
+    queryset = TaskStatus.objects.all()
     
+    def get_serializer_class(self):
+        from .serializers import TaskStatusSerializer
+        return TaskStatusSerializer
+
     def get_queryset(self):
         queryset = TaskStatus.objects.all()
         project_id = self.request.query_params.get('project')
@@ -175,10 +180,31 @@ class TaskStatusViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(project_id=project_id)
         return queryset
 
-    def get_serializer_class(self):
-        from .serializers import TaskStatusSerializer
-        return TaskStatusSerializer
+    def perform_create(self, serializer):
+        project_id = self.request.data.get('project')
+        name = self.request.data.get('name', '')
+        slug = self.request.data.get('slug')
 
+        # Auto-generate slug if not provided
+        if not slug and name:
+            base_slug = name.lower().replace(' ', '-')
+            slug = base_slug
+            counter = 1
+            
+            # Ensure slug is unique for this project
+            while TaskStatus.objects.filter(project_id=project_id, slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+
+        # Set default order (put it at the end)
+        max_order = TaskStatus.objects.filter(project_id=project_id).count()
+        
+        serializer.save(
+            project_id=project_id, 
+            slug=slug,
+            order=max_order # Automatically puts the new column at the end of the board
+        )
+        
 class TaskCommentViewSet(viewsets.ModelViewSet):
     """
     ViewSet for comments belonging to a task.

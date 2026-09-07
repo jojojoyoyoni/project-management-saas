@@ -27,7 +27,8 @@ export default function TaskDetail({ projectId, taskId, onClose }: TaskDetailPro
   const [status, setStatus] = useState('to-do')
   const [priority, setPriority] = useState('medium')
 
-  const { data: members } = useProjectMembers(projectId)
+  const { data: members } = useProjectMembers(projectId, '')
+  
 
 
   // Populate form when task data arrives
@@ -37,9 +38,7 @@ export default function TaskDetail({ projectId, taskId, onClose }: TaskDetailPro
       setDescription(task.description || '')
       setStatus(task.status?.slug || 'to-do')
       setPriority(task.priority?.slug || 'medium')
-      // setAssignee(task.assignee?.id || '') // Assuming API returns assignee object with id
-      setAssignee(task.assignee || '')
-
+      setAssignee(task.assignee?.id != null ? String(task.assignee.id) : '')
       setDueDate(task.due_date ? task.due_date.split('T')[0] : '') // Format date for input
     }
   }, [task])
