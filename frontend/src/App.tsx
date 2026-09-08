@@ -5,6 +5,7 @@ import DashboardPage from '@/pages/dashboard/DashboardPage'
 import ProjectsPage from '@/pages/dashboard/ProjectsPage'
 import TasksPage from '@/pages/dashboard/TasksPage'
 import LoginPage from '@/pages/auth/LoginPage'
+import RegisterPage from '@/pages/auth/RegisterPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 import SettingsPage from '@/pages/dashboard/SettingsPage'
 
@@ -18,6 +19,10 @@ const router = createBrowserRouter([
   {
     path: '/auth/login',
     element: <LoginPage />,
+  },
+    {
+    path: '/auth/register',
+    element: <RegisterPage />,
   },
   {
     path: '/',

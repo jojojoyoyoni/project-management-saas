@@ -6,6 +6,7 @@ export const authKeys = {
   user: () => [...authKeys.all, 'user'] as const,
 }
 
+// Use your original loginUser function with the types
 export const loginUser = async (data: LoginFormValues): Promise<AuthTokens> => {
   return apiClient('/auth/login/', {
     method: 'POST',
@@ -13,33 +14,39 @@ export const loginUser = async (data: LoginFormValues): Promise<AuthTokens> => {
   })
 }
 
-
-// export const getCurrentUser = async () => {
-//   const res = await apiClient('/users/me/')
-//   return res.user // <-- Extract the user object here
-// }
-
-// export const updateUserProfile = async (userData: { first_name?: string; last_name?: string; avatar?: string }) => {
-//   // Assuming your backend has a /api/users/me/ endpoint for the current user
-//   const res = await apiClient('/users/me/', {
-//     method: 'PATCH',
-//     body: JSON.stringify(userData),
-//   })
-//   return res
-// }
-
-
 export const getCurrentUser = async () => {
-  // Change the URL to /auth/me/
   const res = await apiClient('/auth/me/')
-  return res.user // Extract the user object from { success: true, user: {...} }
+  return res.user
 }
 
 export const updateUserProfile = async (userData: { first_name?: string; last_name?: string; avatar?: string }) => {
-  // Change the URL to /auth/me/
   const res = await apiClient('/auth/me/', {
     method: 'PATCH',
     body: JSON.stringify(userData),
   })
   return res.user
+}
+
+export const registerUser = async (userData: { 
+  username: string; 
+  email: string; 
+  first_name: string;
+  last_name: string;
+  password: string; 
+  password_confirm: string 
+}) => {
+  const res = await apiClient('/auth/register/', {
+    method: 'POST',
+    body: JSON.stringify(userData), // Now it sends ALL the fields!
+  })
+  return res
+}
+
+export const logoutUser = async () => {
+  // We need to send the refresh token to Django so it can blacklist it
+  const refreshToken = localStorage.getItem('refresh_token')
+  return apiClient('/auth/logout/', {
+    method: 'POST',
+    body: JSON.stringify({ refresh: refreshToken }),
+  })
 }

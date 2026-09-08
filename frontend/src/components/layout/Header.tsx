@@ -1,9 +1,18 @@
-import { FaRegBell, FaMagnifyingGlass, FaSun, FaMoon } from 'react-icons/fa6'
+import { useNavigate } from 'react-router-dom'
+import { FaRegBell, FaMagnifyingGlass, FaSun, FaMoon, FaRightFromBracket } from 'react-icons/fa6'
 import { useTheme } from '@/context/ThemeContext'
+import { useLogout } from '@/api/hooks/useAuth'
+import { useAppSelector } from '@/store'
 
 export default function Header() {
   const { theme, toggleTheme } = useTheme()
   const isDark = theme === 'dark'
+  const logoutMutation = useLogout()
+  const navigate = useNavigate()
+  
+  // Get user from Redux for the avatar initial
+  const { user } = useAppSelector((state) => state.auth)
+  const userInitial = user?.first_name?.[0]?.toUpperCase() || 'U'
 
   return (
     <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6">
@@ -20,26 +29,41 @@ export default function Header() {
       </div>
 
       {/* Right Side Actions */}
-      <div className="flex items-center space-x-4 ml-4">
+      <div className="flex items-center space-x-2 ml-4">
         {/* Dark Mode Toggle */}
         <button
           onClick={toggleTheme}
           className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+          title="Toggle Dark Mode"
         >
           {isDark ? <FaSun className="h-5 w-5 text-yellow-400" /> : <FaMoon className="h-5 w-5" />}
         </button>
 
         {/* Notifications */}
-        <button className="relative p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
+        <button className="relative p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors" title="Notifications">
           <FaRegBell className="h-5 w-5" />
           <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800" />
         </button>
 
-        {/* User Avatar */}
-        <button className="flex items-center space-x-3">
+        {/* User Avatar -> Links to Settings */}
+        <button 
+          onClick={() => navigate('/settings')}
+          className="flex items-center space-x-3 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          title="Profile Settings"
+        >
           <div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-bold">
-            J
+            {userInitial}
           </div>
+        </button>
+
+        {/* Logout Button */}
+        <button 
+          onClick={() => logoutMutation.mutate()}
+          className="p-2 text-gray-500 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 rounded-full transition-colors"
+          title="Logout"
+          disabled={logoutMutation.isPending}
+        >
+          <FaRightFromBracket className="h-5 w-5" />
         </button>
       </div>
     </header>
