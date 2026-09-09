@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux'
 import { useUpdateProfile } from '@/api/hooks/useAuth'
 import Button from '@/components/common/Button'
 import Spinner from '@/components/common/Spinner'
+import ChangePasswordForm from '@/components/auth/ForgotPasswordForm'
 
 export default function SettingsPage() {
   // Get user from Redux store
@@ -45,6 +46,12 @@ export default function SettingsPage() {
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Manage your account settings and preferences.
         </p>
+      </div>
+
+      {/* Change Password Section */}
+      <div className="bg-white dark:bg-gray-800 shadow-sm rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Change Password</h2>
+        <ChangePasswordForm />
       </div>
 
       {/* Profile Section */}

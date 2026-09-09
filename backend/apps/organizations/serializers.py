@@ -54,7 +54,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
 class CreateOrganizationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organization
-        fields = ["name", "description"]
+        fields = ["name", "description", "logo"]
     
     def create(self, validated_data):
         from core.utils import generate_unique_key

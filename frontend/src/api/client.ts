@@ -11,9 +11,13 @@ export const apiClient = async (endpoint: string, options: RequestInit = {}) => 
     activeOrgId = storeState.org?.activeOrganizationId || localStorage.getItem('activeOrgId')
   } catch (e) { /* ignore parsing errors */ }
 
+  // Check if body is FormData
+  const isFormData = options.body instanceof FormData
+
   const config: RequestInit = {
     headers: {
-      'Content-Type': 'application/json',
+      // Only set JSON content type if NOT sending FormData
+      ...( !isFormData && { 'Content-Type': 'application/json' }),
       ...(token && { Authorization: `Bearer ${token}` }),
       ...(activeOrgId && { 'X-Organization-Id': activeOrgId }),
       ...options.headers,

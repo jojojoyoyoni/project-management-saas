@@ -27,6 +27,17 @@ export const updateUserProfile = async (userData: { first_name?: string; last_na
   return res.user
 }
 
+export const changePassword = async (passwordData: { 
+  old_password: string; 
+  new_password: string; 
+  new_password_confirm: string 
+}) => {
+  return apiClient('/auth/me/password/', {
+    method: 'POST',
+    body: JSON.stringify(passwordData),
+  })
+}
+
 export const registerUser = async (userData: { 
   username: string; 
   email: string; 

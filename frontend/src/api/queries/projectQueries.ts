@@ -10,12 +10,13 @@ export const getProjects = async (orgId: string): Promise<PaginatedResponse<Proj
   return apiClient(`/organizations/${orgId}/projects/`)
 }
 
-// Add this to projectQueries.ts
-// export const getProjectMembers = async (projectId: string) => {
-//   const res = await apiClient(`/projects/${projectId}/members/`)
-//   // Depending on your backend, it might return an array or { results: [...] }
-//   return res.results || res
-// }
+
+export const createProject = async (orgId: string, data: CreateProjectValues): Promise<Project> => {
+  return apiClient(`/organizations/${orgId}/projects/`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
 
 export const getProjectMembers = async (orgId: string, projectId: string) => {
   try {
@@ -27,9 +28,30 @@ export const getProjectMembers = async (orgId: string, projectId: string) => {
   }
 }
 
-export const createProject = async (orgId: string, data: CreateProjectValues): Promise<Project> => {
-  return apiClient(`/organizations/${orgId}/projects/`, {
+
+export const inviteProjectMember = async ({ orgId, projectId, username_or_email, role }: { 
+  orgId: string; projectId: string; username_or_email: string; role: string 
+}) => {
+  return apiClient(`/organizations/${orgId}/projects/${projectId}/invite_member/`, {
     method: 'POST',
-    body: JSON.stringify(data),
+    body: JSON.stringify({ username_or_email, role }),
+  })
+}
+
+export const updateMemberRole = async ({ orgId, projectId, memberId, role }: { 
+  orgId: string; projectId: string; memberId: string; role: string 
+}) => {
+  return apiClient(`/organizations/${orgId}/projects/${projectId}/update_member_role/`, {
+    method: 'PATCH',
+    body: JSON.stringify({ member_id: memberId, role }),
+  })
+}
+
+export const removeProjectMember = async ({ orgId, projectId, memberId }: { 
+  orgId: string; projectId: string; memberId: string 
+}) => {
+  return apiClient(`/organizations/${orgId}/projects/${projectId}/remove_member/`, {
+    method: 'DELETE',
+    body: JSON.stringify({ member_id: memberId }),
   })
 }

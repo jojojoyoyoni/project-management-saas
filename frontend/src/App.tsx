@@ -3,6 +3,8 @@ import { useAppSelector } from '@/store'
 import AppLayout from '@/components/layout/AppLayout'
 import DashboardPage from '@/pages/dashboard/DashboardPage'
 import ProjectsPage from '@/pages/dashboard/ProjectsPage'
+import ProjectDetailPage from '@/pages/dashboard/ProjectDetailPage'
+
 import TasksPage from '@/pages/dashboard/TasksPage'
 import LoginPage from '@/pages/auth/LoginPage'
 import RegisterPage from '@/pages/auth/RegisterPage'
@@ -34,6 +36,8 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'projects', element: <ProjectsPage /> },
+       { path: 'projects/:projectId', element: <ProjectDetailPage /> }, 
+       
       { path: 'tasks', element: <TasksPage /> },
       // MOVE IT HERE: Inside the children of AppLayout
       { path: 'settings', element: <SettingsPage /> },

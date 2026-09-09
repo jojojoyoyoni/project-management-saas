@@ -1,27 +1,36 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
+import type { Organization } from '@/types/organization'
 
 interface OrgState {
   activeOrganizationId: string | null
+  organizations: Organization[]
 }
 
 const initialState: OrgState = {
   activeOrganizationId: localStorage.getItem('activeOrgId'),
+  organizations: [],
 }
 
 const orgSlice = createSlice({
   name: 'org',
   initialState,
   reducers: {
-    setActiveOrganization: (state, action: PayloadAction<string | null>) => {
-      state.activeOrganizationId = action.payload
-      if (action.payload) {
-        localStorage.setItem('activeOrgId', action.payload)
-      } else {
-        localStorage.removeItem('activeOrgId')
-      }
+    setOrganizations: (state, action: PayloadAction<Organization[]>) => {
+      state.organizations = action.payload
     },
+    
+    // FIX: Change payload type to string
+    setActiveOrganization: (state, action: PayloadAction<string>) => {
+      state.activeOrganizationId = action.payload
+      localStorage.setItem('activeOrgId', action.payload)
+    },
+    
+    clearActiveOrganization: (state) => {
+      state.activeOrganizationId = null
+      localStorage.removeItem('activeOrgId')
+    }
   },
 })
 
-export const { setActiveOrganization } = orgSlice.actions
+export const { setOrganizations, setActiveOrganization, clearActiveOrganization } = orgSlice.actions
 export default orgSlice.reducer

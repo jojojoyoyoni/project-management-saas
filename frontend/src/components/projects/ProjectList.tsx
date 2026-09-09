@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useProjects } from '@/api/hooks/useProjects'
 import ProjectCard from './ProjectCard'
 import Spinner from '@/components/common/Spinner'
@@ -32,7 +33,9 @@ export default function ProjectList() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
       {projects.map((project) => (
-        <ProjectCard key={project.id} project={project} />
+        <Link to={`/projects/${project.id}`} key={project.id}>
+          <ProjectCard project={project} />
+        </Link>
       ))}
     </div>
   )

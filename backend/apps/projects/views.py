@@ -115,59 +115,58 @@ class ProjectViewSet(viewsets.ModelViewSet):
             "success": True,
             "members": ProjectMemberSerializer(members, many=True).data,
         })
-    @action(detail=True, methods=["get"])
-    def members(self, request, pk=None):
-        project = self.get_object()
-        members = project.member_records.all() # Uses the related_name from your model
-        serializer = ProjectMemberSerializer(members, many=True)
-        return Response(serializer.data)
-    
+
+    # @action(detail=True, methods=["get"])
+    # def members(self, request, org_id=None, pk=None):
+    #     project = self.get_object()
+    #     members = project.member_records.all()
+    #     serializer = ProjectMemberSerializer(members, many=True)
+    #     return Response(serializer.data)
+
     @action(detail=True, methods=["post"])
-    def add_member(self, request, org_id=None, pk=None):
+    def invite_member(self, request, org_id=None, pk=None):
         project = self.get_object()
-        user_id = request.data.get("user_id")
+        username_or_email = request.data.get("username_or_email")
         role = request.data.get("role", "viewer")
         
-        if not user_id:
-            return Response(
-                {"success": False, "error": "user_id is required."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        if not username_or_email:
+            return Response({"error": "Username or email is required."}, status=400)
+            
+        user = User.objects.filter(Q(username=username_or_email) | Q(email=username_or_email)).first()
+        if not user:
+            return Response({"error": "User not found."}, status=404)
+        if project.member_records.filter(user=user).exists():
+            return Response({"error": "User is already a member."}, status=400)
+            
+        member = ProjectMember.objects.create(project=project, user=user, role=role)
+        return Response(ProjectMemberSerializer(member).data, status=201)
+
+    @action(detail=True, methods=["patch"])
+    def update_member_role(self, request, org_id=None, pk=None):
+        project = self.get_object()
+        member_id = request.data.get("member_id")
+        new_role = request.data.get("role")
         
-        # Get the actual User object
-        try:
-            user = User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            return Response(
-                {"success": False, "error": "User not found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+        member = project.member_records.filter(id=member_id).first()
+        if not member:
+            return Response({"error": "Member not found."}, status=404)
+        if member.role == "owner":
+            return Response({"error": "Cannot change owner's role."}, status=400)
+            
+        member.role = new_role
+        member.save()
+        return Response(ProjectMemberSerializer(member).data)
+
+    @action(detail=True, methods=["delete"])
+    def remove_member(self, request, org_id=None, pk=None):
+        project = self.get_object()
+        member_id = request.data.get("member_id")
         
-        # Check if user is in the same organization
-        org = Organization.objects.get(id=org_id)
-        if not org.is_member(user):  # ← Now passes User object, not string!
-            return Response(
-                {"success": False, "error": "User is not a member of this organization."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        
-        member, created = ProjectMember.objects.get_or_create(
-            project=project,
-            user=user,
-            defaults={"role": role},
-        )
-        
-        if not created:
-            return Response(
-                {"success": False, "error": "User is already a member of this project."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        
-        return Response(
-            {
-                "success": True,
-                "message": "Member added to project.",
-                "member": ProjectMemberSerializer(member).data,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        member = project.member_records.filter(id=member_id).first()
+        if not member:
+            return Response({"error": "Member not found."}, status=404)
+        if member.role == "owner":
+            return Response({"error": "Cannot remove owner."}, status=400)
+            
+        member.delete()
+        return Response({"success": True, "message": "Member removed."})

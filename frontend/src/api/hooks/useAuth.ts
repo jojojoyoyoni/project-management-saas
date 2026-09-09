@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { loginUser, registerUser, authKeys, getCurrentUser, updateUserProfile, logoutUser } from '@/api/queries/authQueries'
+import { loginUser, registerUser, authKeys, getCurrentUser, updateUserProfile, changePassword, logoutUser } from '@/api/queries/authQueries'
 import { useAppDispatch } from '@/store'
 import { setCredentials } from '@/store/slices/authSlice'
 import type { LoginFormValues } from '@/types/auth'
@@ -72,6 +72,14 @@ export const useUpdateProfile = () => {
       // Invalidate the current user query so the header/sidebar updates with new name/avatar
       queryClient.invalidateQueries({ queryKey: ['currentUser'] })
     }
+  })
+}
+
+export const useChangePassword = () => {
+  return useMutation({
+    mutationFn: (passwordData: { old_password: string; new_password: string; new_password_confirm: string }) => {
+      return changePassword(passwordData)
+    },
   })
 }
 
