@@ -1,5 +1,6 @@
+from .permissions import IsOwnerOrReadOnly
 from rest_framework import generics, status, viewsets
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
@@ -42,7 +43,7 @@ class LogoutView(generics.GenericAPIView):
 
 class CurrentUserView(generics.RetrieveUpdateAPIView):
     serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
     
     def get_object(self):
         return self.request.user
@@ -74,9 +75,12 @@ class ChangePasswordView(generics.GenericAPIView):
         return Response({"success": True, "message": "Password changed successfully."})
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = User.objects.all()
-    permission_classes = [IsAuthenticated]
-    filterset_fields = ["role"]
+    queryset = User.objects.all().order_by('-date_joined')
+    
+    # Only Super Admins (is_superuser=True) can access this endpoint
+    permission_classes = [IsAdminUser]
+    
+    filterset_fields = ["role", "is_superuser", "is_active"]
     search_fields = ["username", "first_name", "last_name", "email"]
     
     def get_serializer_class(self):

@@ -19,10 +19,18 @@ class OrganizationViewSet(viewsets.ModelViewSet):
     ordering = ["-created_at"]
     
     def get_queryset(self):
-        # Removed annotate — let serializer call model methods instead
-        return Organization.objects.filter(
-            members=self.request.user
-        )
+        # # Removed annotate — let serializer call model methods instead
+        # return Organization.objects.filter(
+        #     members=self.request.user
+        # )
+        user = self.request.user
+        
+        # SUPER ADMIN: Can see all organizations on the platform
+        if user.is_superuser:
+            return Organization.objects.all().order_by('-created_at')
+        
+        # REGULAR USER: Can only see organizations they belong to
+        return Organization.objects.filter(members=user).order_by('-created_at')
     
     def get_serializer_class(self):
         if self.action == "create":
@@ -43,9 +51,24 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         return self.get_paginated_response(serializer.data)
     
     def create(self, request, *args, **kwargs):
+
+                # RESTRICTION: Check if user already owns an organization
+        if Organization.objects.filter(owner=request.user).exists():
+            return Response(
+                {"error": "You already own an organization. You can only create one."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        # If not, proceed with normal creation
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         org = serializer.save()
+
+        # Add the creator as an 'owner' member
+        OrganizationMember.objects.create(
+            organization=org,
+            user=request.user,
+            role="owner"
+        )
         
         return Response(
             {
@@ -55,6 +78,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
             },
             status=status.HTTP_201_CREATED,
         )
+        
     
     def retrieve(self, request, *args, **kwargs):
         org = self.get_object()

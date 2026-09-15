@@ -33,18 +33,25 @@ class TaskViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         project_id = self.kwargs.get("project_id")
+        user = self.request.user
+
         if not project_id:
             return Task.objects.none()
+
+        # STRICT SECURITY: Only return tasks where:
+        # 1. The task belongs to this specific project
+        # 2. The project's organization has the current user as a member
+
         
         return Task.objects.filter(
             project_id=project_id,
-            project__members=self.request.user,  # Multi-tenancy!
+            project__organization__members=user  # Multi-tenancy!
         ).select_related(
             "project", "status", "priority", "assignee", "reporter", "parent"
         ).prefetch_related(
             "watchers",
         )
-    
+            
     def get_serializer_class(self):
         if self.action == "list":
             return TaskListSerializer

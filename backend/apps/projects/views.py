@@ -1,7 +1,8 @@
-from rest_framework import status, viewsets
+from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.db.models import Q
 
 from apps.users.models import User
 from apps.organizations.models import Organization
@@ -24,12 +25,17 @@ class ProjectViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         org_id = self.kwargs.get("org_id")
+        user = self.request.user
+
         if not org_id:
             return Project.objects.none()
         
+        # STRICT SECURITY: Only return projects where:
+        # 1. The project belongs to this specific organization (org_id from URL)
+        # 2. The user is a member of this organization
         return Project.objects.filter(
             organization_id=org_id,
-        # Removed 'members=self.request.user' so all org members see all projects
+             organization__members=user
         ).select_related("organization", "created_by", "default_assignee")
     
     def get_serializer_class(self):
@@ -53,10 +59,20 @@ class ProjectViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         org_id = self.kwargs.get("org_id")
-        org = Organization.objects.get(id=org_id)
+        
+        # SECURITY: Check if user is actually a member of this org before allowing creation
+        try:
+            org = Organization.objects.get(id=org_id)
+        except Organization.DoesNotExist:
+            raise serializers.ValidationError({"error": "Organization not found."})
+            
+        if not org.is_member(self.request.user):
+            raise serializers.ValidationError({"error": "You do not have access to this organization."})
+            
+        # Create the project and set the creator as the Project Owner
         project = serializer.save(organization=org, created_by=self.request.user)
         ProjectMember.objects.create(
-            project=project, user=self.request.user, role=ProjectMember.Role.OWNER,
+            project=project, user=self.request.user, role=ProjectMember.Role.OWNER
         )
         return project
     

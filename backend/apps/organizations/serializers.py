@@ -17,6 +17,8 @@ class OrganizationSerializer(serializers.ModelSerializer):
     project_count = serializers.SerializerMethodField()
     is_owner = serializers.SerializerMethodField()
     current_user_role = serializers.SerializerMethodField()
+        # ADD THIS to return the owner's details
+    owner = UserListSerializer(read_only=True)
     
     class Meta:
         model = Organization
@@ -55,6 +57,14 @@ class CreateOrganizationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organization
         fields = ["name", "description", "logo"]
+        read_only_fields = ["slug", "plan"]
+
+    # ADD THIS METHOD to check for duplicate names
+    def validate_name(self, value):
+        # iexact means it's case-insensitive (e.g., "Acme" and "acme" are the same)
+        if Organization.objects.filter(name__iexact=value).exists():
+            raise serializers.ValidationError("An organization with this name already exists.")
+        return value
     
     def create(self, validated_data):
         from core.utils import generate_unique_key
