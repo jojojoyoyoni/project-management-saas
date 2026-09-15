@@ -13,6 +13,11 @@ export interface User {
   first_name: string
   last_name: string
   role: string
+  is_active: boolean
+  is_superuser: boolean
+  avatar?: string | null
+  date_joined: string
+  last_login?: string | null
 }
 
 export interface AuthTokens {

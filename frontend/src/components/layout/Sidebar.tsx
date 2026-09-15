@@ -2,7 +2,7 @@ import { Fragment, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { Listbox, Transition } from '@headlessui/react'
 import clsx from 'clsx'
-import { FaHouse, FaFolderOpen, FaListCheck, FaGear, FaBolt, FaChevronDown, FaPlus, FaBuilding } from 'react-icons/fa6'
+import { FaHouse, FaFolderOpen, FaListCheck, FaGear, FaBolt, FaChevronDown, FaPlus, FaBuilding, FaUserShield } from 'react-icons/fa6'
 import { useOrganizations } from '@/api/hooks/useOrganizations'
 import { useAppDispatch, useAppSelector } from '@/store'
 import { setActiveOrganization } from '@/store/slices/orgSlice'
@@ -11,22 +11,32 @@ import CreateOrganizationModal from '@/components/organizations/CreateOrganizati
 import UpdateOrganizationModal from '@/components/organizations/UpdateOrganizationModal'
 import Modal from '../common/Modal'
 
-const navigation = [
-  { name: 'Dashboard', href: '/', icon: FaHouse },
-  { name: 'Projects', href: '/projects', icon: FaFolderOpen },
-  { name: 'My Tasks', href: '/tasks', icon: FaListCheck },
-  { name: 'Settings', href: '/settings', icon: FaGear },
-]
-
 export default function Sidebar() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  
   const activeOrgId = useAppSelector((state) => state.org.activeOrganizationId)
   const { data: organizations = [] } = useOrganizations()
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false)
+  
+  // 2. Get user from Redux
+  const { user } = useAppSelector((state) => state.auth)
+  // Check if the user owns any of the organizations in the list
+  const ownsAnOrganization = organizations.some((org) => org.owner === user?.id || org.is_owner === true)
+
+  // 3. Define navigation INSIDE the component so it can access `user`
+  const navigation = [
+    { name: 'Dashboard', href: '/', icon: FaHouse },
+    { name: 'Projects', href: '/projects', icon: FaFolderOpen },
+    { name: 'My Tasks', href: '/tasks', icon: FaListCheck },
+    { name: 'Settings', href: '/settings', icon: FaGear },
+    // Conditionally add Admin Panel if user is superuser
+    ...(user?.is_superuser ? [
+      { name: 'Admin Users', href: '/admin/users', icon: FaUserShield },
+      { name: 'Admin Orgs', href: '/admin/organizations', icon: FaBuilding }
+    ] : [])
+  ]
 
   const activeOrg = organizations.find((org) => org.id === activeOrgId) || organizations[0]
 
@@ -118,6 +128,19 @@ export default function Sidebar() {
         )}
       </div>
 
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+        {/* Only show the button if they DON'T own an org yet */}
+        {!ownsAnOrganization && (
+          <button 
+            onClick={() => setIsCreateModalOpen(true)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+          >
+            <FaPlus className="h-4 w-4" />
+            New Organization
+          </button>
+        )}
+      </div>
+
       <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
         {navigation.map((item) => (
           <NavLink
@@ -140,13 +163,16 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-        <button 
-          onClick={() => setIsCreateModalOpen(true)}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
-        >
-          <FaPlus className="h-4 w-4" />
-          New Organization
+        {/* Only show the button if they DON'T own an org yet */}
+        {!ownsAnOrganization && (
+          <button 
+            onClick={() => setIsCreateModalOpen(true)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+          >
+            <FaPlus className="h-4 w-4" />
+            New Organization
         </button>
+        )}
       </div>
 
       {/* Modals */}

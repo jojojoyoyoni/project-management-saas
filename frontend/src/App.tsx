@@ -11,11 +11,23 @@ import RegisterPage from '@/pages/auth/RegisterPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 import SettingsPage from '@/pages/dashboard/SettingsPage'
 
+import AdminUsersPage from '@/pages/admin/AdminUsersPage'
+import AdminOrganizationsPage from '@/pages/admin/AdminOrganizationsPage'
+
+
+const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user } = useAppSelector((state) => state.auth)
+  if (!user?.is_superuser) return <Navigate to="/" replace />
+  
+  return <>{children}</>
+}
+
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated)
   if (!isAuthenticated) return <Navigate to="/auth/login" replace />
   return <>{children}</>
 }
+
 
 const router = createBrowserRouter([
   {
@@ -41,6 +53,10 @@ const router = createBrowserRouter([
       { path: 'tasks', element: <TasksPage /> },
       // MOVE IT HERE: Inside the children of AppLayout
       { path: 'settings', element: <SettingsPage /> },
+
+      { path: 'admin/users', element: <AdminRoute><AdminUsersPage /></AdminRoute> },
+      { path: 'admin/organizations', element: <AdminRoute><AdminOrganizationsPage /></AdminRoute> },
+
     ],
   },
   {

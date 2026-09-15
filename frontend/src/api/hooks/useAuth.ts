@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { loginUser, registerUser, authKeys, getCurrentUser, updateUserProfile, changePassword, logoutUser } from '@/api/queries/authQueries'
+import { loginUser, registerUser, authKeys, getCurrentUser, updateUserProfile, changePassword, logoutUser, getAllUsers } from '@/api/queries/authQueries'
 import { useAppDispatch } from '@/store'
 import { setCredentials } from '@/store/slices/authSlice'
 import type { LoginFormValues } from '@/types/auth'
@@ -58,6 +58,13 @@ export const useCurrentUser = () => {
     queryFn: getCurrentUser,
     // Only fetch if we have a token in localStorage
     enabled: !!localStorage.getItem('access_token'),
+  })
+}
+
+export const useAllUsers = () => {
+  return useQuery({
+    queryKey: ['allUsers'],
+    queryFn: getAllUsers,
   })
 }
 

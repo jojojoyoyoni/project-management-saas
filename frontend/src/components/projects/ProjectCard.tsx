@@ -27,7 +27,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
 
       <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
         <span>{project.task_count || 0} Tasks</span>
-        <span>0 Members</span>
+        <span>{project.member_count || 0} Members</span>
       </div>
     </div>
   )

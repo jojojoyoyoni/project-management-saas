@@ -19,6 +19,12 @@ export const getCurrentUser = async () => {
   return res.user
 }
 
+export const getAllUsers = async () => {
+  // Your UserViewSet is registered under /api/auth/users/
+  const res = await apiClient('/auth/users/')
+  return res.results || res
+}
+
 export const updateUserProfile = async (userData: { first_name?: string; last_name?: string; avatar?: string }) => {
   const res = await apiClient('/auth/me/', {
     method: 'PATCH',
@@ -61,3 +67,4 @@ export const logoutUser = async () => {
     body: JSON.stringify({ refresh: refreshToken }),
   })
 }
+
