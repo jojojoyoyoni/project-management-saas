@@ -10,7 +10,8 @@ interface ProjectTeamModalProps {
 }
 
 export default function ProjectTeamModal({ orgId, projectId, onClose }: ProjectTeamModalProps) {
-  const { data: members, isLoading } = useProjectMembers(orgId, projectId)
+  const { data: rawMembers, isLoading } = useProjectMembers(orgId, projectId)
+  const members = rawMembers?.members || rawMembers || []
   const inviteMember = useInviteMember(orgId, projectId)
   const updateRole = useUpdateMemberRole(orgId, projectId)
   const removeMember = useRemoveMember(orgId, projectId)
@@ -44,8 +45,8 @@ export default function ProjectTeamModal({ orgId, projectId, onClose }: ProjectT
             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500"
           >
             <option value="viewer">Viewer</option>
-            <option value="editor">Editor</option>
-            <option value="admin">Admin</option>
+            <option value="editor">Project Member</option>
+            <option value="admin">Project Manager</option>
           </select>
           <Button type="submit" isLoading={inviteMember.isPending}>Invite</Button>
         </form>
@@ -57,41 +58,46 @@ export default function ProjectTeamModal({ orgId, projectId, onClose }: ProjectT
         <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Team Members</h3>
         {isLoading ? <Spinner /> : (
           <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
-            {members?.map((m: any) => (
-              <div key={m.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {m.user.first_name ? `${m.user.first_name} ${m.user.last_name}` : m.user.username}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{m.user.email}</p>
-                </div>
+            {members.length === 0 ? (
+              <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">No members yet. Invite someone to your project!</p>
+            ) : (
+              members.map((m: any) => (
+                <div key={m.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {m.user?.first_name ? `${m.user.first_name} ${m.user.last_name}` : m.user?.username}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{m.user?.email}</p>
+                  </div>
                 
-                <div className="flex items-center gap-2">
-                  {m.role === 'owner' ? (
-                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">Owner</span>
-                  ) : (
-                    <>
-                      <select
-                        value={m.role}
-                        onChange={(e) => updateRole.mutate({ memberId: m.id, role: e.target.value })}
-                        className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                      >
-                        <option value="viewer">Viewer</option>
-                        <option value="editor">Editor</option>
-                        <option value="admin">Admin</option>
+                  <div className="flex items-center gap-2">
+                    {m.role === 'owner' ? (
+                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">Owner</span>
+                    ) : (
+                     <>
+                        <select
+                          value={m.role}
+                          onChange={(e) => updateRole.mutate({ memberId: m.id, role: e.target.value })}
+                          className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                        >
+                      <option value="viewer">Viewer</option>
+                      <option value="editor">Project Member</option>
+                      <option value="admin">Project Manager</option>
                       </select>
                       <button 
-                        onClick={() => removeMember.mutate(m.id)}
-                        className="text-gray-400 hover:text-red-500 p-1"
-                        title="Remove Member"
-                      >
-                        ✕
+                          onClick={() => removeMember.mutate(m.id)}
+                          className="text-gray-400 hover:text-red-500 p-1"
+                          title="Remove Member"
+                        >
+                          ✕
                       </button>
                     </>
                   )}
+                    
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         )}
       </div>

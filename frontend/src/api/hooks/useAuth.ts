@@ -103,6 +103,7 @@ export const useRegister = () => {
       last_name: string;
       password: string; 
       password_confirm: string; 
+      token?: string; // Optional token for invite links
     }) => registerUser(data),
     onSuccess: () => {
       // After successful registration, redirect them to the login page

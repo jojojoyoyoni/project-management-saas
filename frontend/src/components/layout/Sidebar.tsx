@@ -20,18 +20,15 @@ export default function Sidebar() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false)
   
-  // 2. Get user from Redux
   const { user } = useAppSelector((state) => state.auth)
-  // Check if the user owns any of the organizations in the list
   const ownsAnOrganization = organizations.some((org) => org.owner === user?.id || org.is_owner === true)
 
-  // 3. Define navigation INSIDE the component so it can access `user`
   const navigation = [
     { name: 'Dashboard', href: '/', icon: FaHouse },
     { name: 'Projects', href: '/projects', icon: FaFolderOpen },
     { name: 'My Tasks', href: '/tasks', icon: FaListCheck },
+    { name: 'Team', href: '/organization/team', icon: FaUserShield },
     { name: 'Settings', href: '/settings', icon: FaGear },
-    // Conditionally add Admin Panel if user is superuser
     ...(user?.is_superuser ? [
       { name: 'Admin Users', href: '/admin/users', icon: FaUserShield },
       { name: 'Admin Orgs', href: '/admin/organizations', icon: FaBuilding }
@@ -48,6 +45,7 @@ export default function Sidebar() {
 
   return (
     <aside className="flex flex-col w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-screen">
+      {/* Logo Header */}
       <div className="flex items-center h-16 px-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <FaBolt className="text-indigo-600 text-2xl mr-2" />
         <span className="text-xl font-bold text-gray-900 dark:text-white">ProjectFlow</span>
@@ -58,7 +56,6 @@ export default function Sidebar() {
         {organizations.length > 0 ? (
           <div className="flex items-center gap-2 min-w-0">
             <div className="relative flex-1 min-w-0">
-
               <Listbox value={activeOrg?.id || ''} onChange={handleOrgChange}>
                 <div className="relative">
                   <Listbox.Button className="relative w-full cursor-pointer rounded-lg bg-gray-100 dark:bg-gray-700 py-2.5 pl-2 pr-10 text-left text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 flex items-center">
@@ -128,19 +125,7 @@ export default function Sidebar() {
         )}
       </div>
 
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-        {/* Only show the button if they DON'T own an org yet */}
-        {!ownsAnOrganization && (
-          <button 
-            onClick={() => setIsCreateModalOpen(true)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
-          >
-            <FaPlus className="h-4 w-4" />
-            New Organization
-          </button>
-        )}
-      </div>
-
+      {/* Navigation Links */}
       <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
         {navigation.map((item) => (
           <NavLink
@@ -162,8 +147,8 @@ export default function Sidebar() {
         ))}
       </nav>
 
+      {/* New Organization Button (Only at the bottom) */}
       <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-        {/* Only show the button if they DON'T own an org yet */}
         {!ownsAnOrganization && (
           <button 
             onClick={() => setIsCreateModalOpen(true)}
@@ -171,7 +156,7 @@ export default function Sidebar() {
           >
             <FaPlus className="h-4 w-4" />
             New Organization
-        </button>
+          </button>
         )}
       </div>
 

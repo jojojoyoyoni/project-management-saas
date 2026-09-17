@@ -6,51 +6,54 @@ export const projectKeys = {
   lists: () => [...projectKeys.all, 'list'] as const,
 }
 
-export const getProjects = async (orgId: string): Promise<PaginatedResponse<Project>> => {
-  return apiClient(`/organizations/${orgId}/projects/`)
+export const getProjects = async (): Promise<PaginatedResponse<Project>> => {
+  return apiClient('/projects/')
 }
 
-
 export const createProject = async (orgId: string, data: CreateProjectValues): Promise<Project> => {
-  return apiClient(`/organizations/${orgId}/projects/`, {
+  // Send orgId inside the JSON body as 'organization'
+  return apiClient(`/projects/`, {
     method: 'POST',
-    body: JSON.stringify(data),
+    body: JSON.stringify({ ...data, organization: orgId }),
   })
 }
 
-export const getProjectMembers = async (orgId: string, projectId: string) => {
+// Removed orgId parameter
+export const getProjectMembers = async (projectId: string) => {
   try {
-    const res = await apiClient(`/organizations/${orgId}/projects/${projectId}/members/`)
-    return res.results || res
+    const res = await apiClient(`/projects/${projectId}/members/`)
+    // Backend returns { success, members: [...] }, so we extract it safely
+    return res.members || res.results || res
   } catch (error) {
-    // If it fails, return empty array so the dropdown doesn't crash
     return []
   }
 }
 
-
-export const inviteProjectMember = async ({ orgId, projectId, username_or_email, role }: { 
-  orgId: string; projectId: string; username_or_email: string; role: string 
+// Removed orgId parameter
+export const inviteProjectMember = async ({ projectId, username_or_email, role }: { 
+  projectId: string; username_or_email: string; role: string 
 }) => {
-  return apiClient(`/organizations/${orgId}/projects/${projectId}/invite_member/`, {
+  return apiClient(`/projects/${projectId}/invite_member/`, {
     method: 'POST',
     body: JSON.stringify({ username_or_email, role }),
   })
 }
 
-export const updateMemberRole = async ({ orgId, projectId, memberId, role }: { 
-  orgId: string; projectId: string; memberId: string; role: string 
+// Removed orgId parameter
+export const updateMemberRole = async ({ projectId, memberId, role }: { 
+  projectId: string; memberId: string; role: string 
 }) => {
-  return apiClient(`/organizations/${orgId}/projects/${projectId}/update_member_role/`, {
+  return apiClient(`/projects/${projectId}/update_member_role/`, {
     method: 'PATCH',
     body: JSON.stringify({ member_id: memberId, role }),
   })
 }
 
-export const removeProjectMember = async ({ orgId, projectId, memberId }: { 
-  orgId: string; projectId: string; memberId: string 
+// Removed orgId parameter
+export const removeProjectMember = async ({ projectId, memberId }: { 
+  projectId: string; memberId: string 
 }) => {
-  return apiClient(`/organizations/${orgId}/projects/${projectId}/remove_member/`, {
+  return apiClient(`/projects/${projectId}/remove_member/`, {
     method: 'DELETE',
     body: JSON.stringify({ member_id: memberId }),
   })

@@ -4,6 +4,8 @@ import AppLayout from '@/components/layout/AppLayout'
 import DashboardPage from '@/pages/dashboard/DashboardPage'
 import ProjectsPage from '@/pages/dashboard/ProjectsPage'
 import ProjectDetailPage from '@/pages/dashboard/ProjectDetailPage'
+import OrganizationTeamPage from '@/pages/dashboard/OrganizationTeamPage'
+
 
 import TasksPage from '@/pages/dashboard/TasksPage'
 import LoginPage from '@/pages/auth/LoginPage'
@@ -13,6 +15,7 @@ import SettingsPage from '@/pages/dashboard/SettingsPage'
 
 import AdminUsersPage from '@/pages/admin/AdminUsersPage'
 import AdminOrganizationsPage from '@/pages/admin/AdminOrganizationsPage'
+
 
 
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
@@ -56,6 +59,8 @@ const router = createBrowserRouter([
 
       { path: 'admin/users', element: <AdminRoute><AdminUsersPage /></AdminRoute> },
       { path: 'admin/organizations', element: <AdminRoute><AdminOrganizationsPage /></AdminRoute> },
+      { path: 'organization/team', element: <OrganizationTeamPage /> },
+
 
     ],
   },

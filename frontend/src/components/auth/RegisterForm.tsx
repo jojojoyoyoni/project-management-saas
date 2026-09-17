@@ -1,4 +1,6 @@
 import { useForm } from 'react-hook-form'
+import { useSearchParams } from 'react-router-dom'
+
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useRegister } from '@/api/hooks/useAuth'
@@ -28,9 +30,17 @@ export default function RegisterForm() {
   })
 
   const registerMutation = useRegister()
+  const [searchParams] = useSearchParams()
+
 
   const onSubmit = (data: RegisterFormValues) => {
-    registerMutation.mutate(data)
+    // Get the token from the URL (if they clicked an invite link)
+    const inviteToken = searchParams.get('token')
+    
+    registerMutation.mutate({
+      ...data,
+      token: inviteToken || undefined, // Add token to payload
+    })
   }
 
   return (

@@ -5,15 +5,25 @@ import ProjectTeamModal from '@/components/projects/ProjectTeamModal'
 import Modal from '@/components/common/Modal'
 import Button from '@/components/common/Button'
 import { useSelector } from 'react-redux'
+import { useOrganizations } from '@/api/hooks/useOrganizations'
 
 export default function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const [activeTab, setActiveTab] = useState<'board' | 'team'>('board')
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false)
   
-  // Get orgId from Redux (Adjust if your org slice is different)
-  const orgId = useSelector((state: any) => state.org?.activeOrgId || '1')
-//   const orgId = "8"
+//   // Get orgId from Redux (Adjust if your org slice is different)
+//   const orgId = useSelector((state: any) => state.org?.activeOrgId || '1')
+// //   const orgId = "8"
+  // Get the real organizations from the API
+  const { data: organizations = [] } = useOrganizations()
+  
+  // Get activeOrgId from Redux
+  const reduxOrgId = useSelector((state: any) => state.org?.activeOrganizationId)
+  
+  // Find the actual active organization object
+  const activeOrg = organizations.find((org) => org.id === reduxOrgId) || organizations[0]
+  const orgId = activeOrg?.id
 
   if (!projectId) return <div>Project not found.</div>
 

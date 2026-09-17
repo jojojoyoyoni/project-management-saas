@@ -6,7 +6,6 @@ export const authKeys = {
   user: () => [...authKeys.all, 'user'] as const,
 }
 
-// Use your original loginUser function with the types
 export const loginUser = async (data: LoginFormValues): Promise<AuthTokens> => {
   return apiClient('/auth/login/', {
     method: 'POST',
@@ -20,9 +19,15 @@ export const getCurrentUser = async () => {
 }
 
 export const getAllUsers = async () => {
-  // Your UserViewSet is registered under /api/auth/users/
   const res = await apiClient('/auth/users/')
-  return res.results || res
+  
+  // Handle paginated response { count: 7, results: [...] }
+  if (res.results) return res.results
+  
+  // Handle flat array response [ {...}, {...} ]
+  if (Array.isArray(res)) return res
+  
+  return []
 }
 
 export const updateUserProfile = async (userData: { first_name?: string; last_name?: string; avatar?: string }) => {
@@ -51,20 +56,20 @@ export const registerUser = async (userData: {
   last_name: string;
   password: string; 
   password_confirm: string 
+  token?: string;
+
 }) => {
   const res = await apiClient('/auth/register/', {
     method: 'POST',
-    body: JSON.stringify(userData), // Now it sends ALL the fields!
+    body: JSON.stringify(userData),
   })
   return res
 }
 
 export const logoutUser = async () => {
-  // We need to send the refresh token to Django so it can blacklist it
   const refreshToken = localStorage.getItem('refresh_token')
   return apiClient('/auth/logout/', {
     method: 'POST',
     body: JSON.stringify({ refresh: refreshToken }),
   })
 }
-
