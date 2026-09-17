@@ -16,7 +16,7 @@ class UserSerializer(serializers.ModelSerializer):
             "avatar", "bio", "phone", "job_title", "role", "timezone",
             "receives_email_notifications", "receives_push_notifications",
             "last_activity_at", "email_verified_at", "date_joined",
-            "initials", "is_email_verified",
+            "initials", "is_email_verified",  "is_superuser", "is_active",
         ]
         read_only_fields = ["id", "last_activity_at", "email_verified_at", "date_joined"]
     
@@ -28,10 +28,12 @@ class UserListSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ["id", "username", "first_name", "last_name", "avatar", "job_title", "role", "initials"]
+        fields = ["id", "username", "email", "first_name", "last_name", "avatar", "job_title", "role","is_superuser", "is_active", "date_joined", "initials"]
     
     def get_initials(self, obj):
-        return obj.get_initials()
+        if obj.first_name and obj.last_name:
+            return f"{obj.first_name[0]}{obj.last_name[0]}".upper()
+        return (obj.username[0] if obj.username else "U").upper()
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, validators=[validate_password])

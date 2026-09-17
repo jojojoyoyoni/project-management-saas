@@ -24,19 +24,24 @@ class ProjectViewSet(viewsets.ModelViewSet):
     ordering = ["-created_at"]
     
     def get_queryset(self):
-        org_id = self.kwargs.get("org_id")
         user = self.request.user
-
-        if not org_id:
-            return Project.objects.none()
         
-        # STRICT SECURITY: Only return projects where:
-        # 1. The project belongs to this specific organization (org_id from URL)
-        # 2. The user is a member of this organization
-        return Project.objects.filter(
-            organization_id=org_id,
-             organization__members=user
-        ).select_related("organization", "created_by", "default_assignee")
+        # Get the active organization ID from the frontend header
+        org_id = self.request.headers.get('X-Organization-Id')
+        
+        # SUPER ADMIN OVERRIDE: Can see all projects in the organization
+        if user.is_superuser:
+            queryset = Project.objects.all()
+            if org_id:
+                queryset = queryset.filter(organization_id=org_id)
+            return queryset.select_related("organization", "created_by", "default_assignee")
+        
+        # REGULAR USER: Only sees projects they are explicitly a member of
+        queryset = Project.objects.filter(members=user)
+        if org_id:
+            queryset = queryset.filter(organization_id=org_id)
+            
+        return queryset.select_related("organization", "created_by", "default_assignee")
     
     def get_serializer_class(self):
         if self.action == "list":
@@ -46,34 +51,23 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return ProjectDetailSerializer
     
     def get_permissions(self):
-        if self.action in ["update", "partial_update"]:
-            return [IsAuthenticated(), IsProjectAdmin()]
-        if self.action == "destroy":
+        if self.action in ["update", "partial_update", "destroy"]:
             return [IsAuthenticated(), IsProjectAdmin()]
         return [IsAuthenticated()]
     
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context["organization_id"] = self.kwargs.get("org_id")
-        return context
-    
     def perform_create(self, serializer):
-        org_id = self.kwargs.get("org_id")
+        # When creating, get the org_id from the request data (sent by React)
+        org_id = self.request.data.get("organization")
         
-        # SECURITY: Check if user is actually a member of this org before allowing creation
-        try:
-            org = Organization.objects.get(id=org_id)
-        except Organization.DoesNotExist:
-            raise serializers.ValidationError({"error": "Organization not found."})
+        if not org_id:
+            raise serializers.ValidationError({"error": "Organization ID is required."})
             
+        org = Organization.objects.get(id=org_id)
         if not org.is_member(self.request.user):
             raise serializers.ValidationError({"error": "You do not have access to this organization."})
             
-        # Create the project and set the creator as the Project Owner
         project = serializer.save(organization=org, created_by=self.request.user)
-        ProjectMember.objects.create(
-            project=project, user=self.request.user, role=ProjectMember.Role.OWNER
-        )
+        ProjectMember.objects.create(project=project, user=self.request.user, role=ProjectMember.Role.OWNER)
         return project
     
     def list(self, request, *args, **kwargs):
@@ -123,8 +117,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
         self.get_object().delete()
         return Response({"success": True, "message": "Project deleted."})
     
+    # Removed org_id from signatures
     @action(detail=True, methods=["get"])
-    def members(self, request, org_id=None, pk=None):
+    def members(self, request, pk=None):
         project = self.get_object()
         members = project.member_records.select_related("user").all()
         return Response({
@@ -132,15 +127,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
             "members": ProjectMemberSerializer(members, many=True).data,
         })
 
-    # @action(detail=True, methods=["get"])
-    # def members(self, request, org_id=None, pk=None):
-    #     project = self.get_object()
-    #     members = project.member_records.all()
-    #     serializer = ProjectMemberSerializer(members, many=True)
-    #     return Response(serializer.data)
-
     @action(detail=True, methods=["post"])
-    def invite_member(self, request, org_id=None, pk=None):
+    def invite_member(self, request, pk=None):
         project = self.get_object()
         username_or_email = request.data.get("username_or_email")
         role = request.data.get("role", "viewer")
@@ -151,14 +139,19 @@ class ProjectViewSet(viewsets.ModelViewSet):
         user = User.objects.filter(Q(username=username_or_email) | Q(email=username_or_email)).first()
         if not user:
             return Response({"error": "User not found."}, status=404)
+            
+        # SECURITY: Make sure the invited user is in the same organization!
+        if not project.organization.is_member(user):
+            return Response({"error": "User must be a member of the organization first."}, status=400)
+            
         if project.member_records.filter(user=user).exists():
-            return Response({"error": "User is already a member."}, status=400)
+            return Response({"error": "User is already a member of this project."}, status=400)
             
         member = ProjectMember.objects.create(project=project, user=user, role=role)
         return Response(ProjectMemberSerializer(member).data, status=201)
 
     @action(detail=True, methods=["patch"])
-    def update_member_role(self, request, org_id=None, pk=None):
+    def update_member_role(self, request, pk=None):
         project = self.get_object()
         member_id = request.data.get("member_id")
         new_role = request.data.get("role")
@@ -174,7 +167,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return Response(ProjectMemberSerializer(member).data)
 
     @action(detail=True, methods=["delete"])
-    def remove_member(self, request, org_id=None, pk=None):
+    def remove_member(self, request, pk=None):
         project = self.get_object()
         member_id = request.data.get("member_id")
         

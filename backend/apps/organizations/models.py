@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
@@ -96,3 +97,27 @@ class OrganizationMember(models.Model):
     
     def __str__(self):
         return f"{self.user} in {self.organization} as {self.role}"
+
+
+
+class OrganizationInvite(models.Model):
+    """Tracks pending invitations to an organization."""
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="invites")
+    email = models.EmailField()
+    role = models.CharField(max_length=20, default="member")
+    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        related_name="sent_org_invites"
+    )
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "organization_invites"
+        unique_together = ["organization", "email"] # Can't invite the same email twice
+
+    def __str__(self):
+        return f"Invite for {self.email} to {self.organization.name}"

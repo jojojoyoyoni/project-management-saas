@@ -6,7 +6,6 @@ from django.http import JsonResponse
 from rest_framework.routers import DefaultRouter
 
 from apps.tasks.views import TaskStatusViewSet
-from apps.projects.views import ProjectViewSet # Make sure this is imported
 
 # Router for Task Statuses (Kanban Columns)
 status_router = DefaultRouter()
@@ -35,8 +34,11 @@ urlpatterns = [
     # Organizations
     path("api/organizations/", include("apps.organizations.urls")),
     
-    # Projects (Nested under organizations)
-    path("api/organizations/<int:org_id>/projects/", include("apps.projects.urls")),
+    # # Projects (Nested under organizations)
+    # path("api/organizations/<int:org_id>/projects/", include("apps.projects.urls")),
+    
+    # CHANGE THIS: Remove <int:org_id> from the projects URL
+    path("api/projects/", include("apps.projects.urls")),
     
     # Tasks (Nested under projects)
     path("api/projects/<int:project_id>/tasks/", include("apps.tasks.urls")),

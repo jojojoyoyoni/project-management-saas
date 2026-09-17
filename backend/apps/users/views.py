@@ -1,8 +1,10 @@
+from django.utils import timezone
 from .permissions import IsOwnerOrReadOnly
 from rest_framework import generics, status, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from apps.organizations.models import OrganizationInvite, OrganizationMember
 
 from .models import User
 from .serializers import (
@@ -15,10 +17,34 @@ class RegisterView(generics.CreateAPIView):
     permission_classes = [AllowAny]
     serializer_class = RegisterSerializer
     
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        
+        # NEW: Check for invitation token
+        token = request.data.get("token")
+        if token:
+            try:
+                invite = OrganizationInvite.objects.get(token=token, accepted_at__isnull=True)
+                
+                # Add user to the organization
+                OrganizationMember.objects.create(
+                    organization=invite.organization,
+                    user=user,
+                    role=invite.role,
+                    invited_by=invite.invited_by
+                )
+                
+                # Mark invite as accepted
+                invite.accepted_at = timezone.now()
+                invite.save()
+                
+            except OrganizationInvite.DoesNotExist:
+                # If token is invalid, we still register the user, but they just won't be added to an org
+                pass
+        
         return Response(
             {"success": True, "message": "User registered successfully.", "user": UserSerializer(user).data},
             status=status.HTTP_201_CREATED,

@@ -1,4 +1,4 @@
-from rest_framework import status, viewsets
+from rest_framework import status, viewsets, serializers
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -24,13 +24,31 @@ class TaskViewSet(viewsets.ModelViewSet):
     ordering_fields = ["created_at", "updated_at", "due_date", "task_number", "priority"]
     ordering = ["-created_at"]
 
-
     def get_serializer_context(self):
         """Pass project_id to serializer context so SlugField can convert slugs to IDs."""
         context = super().get_serializer_context()
         context['project_id'] = self.kwargs.get('project_id')
         return context
     
+    # def get_queryset(self):
+    #     project_id = self.kwargs.get("project_id")
+    #     user = self.request.user
+
+    #     if not project_id:
+    #         return Task.objects.none()
+
+    #     # STRICT SECURITY: Only return tasks where:
+    #     # 1. The task belongs to this specific project
+    #     # 2. The user is explicitly a member of THIS project
+    #     return Task.objects.filter(
+    #         project_id=project_id,
+    #         project__members=user 
+    #     ).select_related(
+    #         "project", "status", "priority", "assignee", "reporter", "parent"
+    #     ).prefetch_related(
+    #         "watchers",
+    #     )
+
     def get_queryset(self):
         project_id = self.kwargs.get("project_id")
         user = self.request.user
@@ -38,14 +56,18 @@ class TaskViewSet(viewsets.ModelViewSet):
         if not project_id:
             return Task.objects.none()
 
-        # STRICT SECURITY: Only return tasks where:
-        # 1. The task belongs to this specific project
-        # 2. The project's organization has the current user as a member
+        # Base queryset: tasks for this specific project
+        queryset = Task.objects.filter(project_id=project_id)
 
-        
-        return Task.objects.filter(
-            project_id=project_id,
-            project__organization__members=user  # Multi-tenancy!
+        # SUPER ADMIN OVERRIDE: Can see all tasks in the project
+        if user.is_superuser:
+            return queryset.select_related(
+                "project", "status", "priority", "assignee", "reporter", "parent"
+            ).prefetch_related("watchers",)
+
+        # REGULAR USER: Only sees tasks if they are a member of the project
+        return queryset.filter(
+            project__members=user 
         ).select_related(
             "project", "status", "priority", "assignee", "reporter", "parent"
         ).prefetch_related(
@@ -58,7 +80,6 @@ class TaskViewSet(viewsets.ModelViewSet):
         if self.action in ["create", "update", "partial_update"]:
             return CreateTaskSerializer
         return TaskDetailSerializer
-
     
     def get_permissions(self):
         if self.action in ["update", "partial_update", "destroy", "clone", "watch", "unwatch", "clone"]:
@@ -78,17 +99,24 @@ class TaskViewSet(viewsets.ModelViewSet):
         })
     
     def create(self, request, *args, **kwargs):
+        project_id = self.kwargs.get("project_id")
+        
+        # SECURITY: Check if user is a member of the project before creating a task
+        project = Project.objects.filter(id=project_id, members=request.user).first()
+        if not project:
+            raise serializers.ValidationError({"error": "You do not have access to this project."})
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         task = serializer.save(
-            project_id=self.kwargs.get("project_id"),
-            reporter=self.request.user,
+            project=project,
+            reporter=request.user,
         )
         
         # Log creation
         TaskActivity.objects.create(
             task=task,
-            user=self.request.user,
+            user=request.user,
             action="created",
             description=f"Created task: {task.title}",
         )
@@ -97,8 +125,6 @@ class TaskViewSet(viewsets.ModelViewSet):
             {"success": True, "task": TaskDetailSerializer(task).data},
             status=status.HTTP_201_CREATED,
         )
-
-    
     
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
@@ -145,7 +171,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         task = self.get_object()
         from .services import TaskService
         
-        cloned = TaskService.clone_task(task, self.request.user)
+        cloned = TaskService.clone_task(task, request.user)
         return Response(
             {"success": True, "task": TaskDetailSerializer(cloned, context=self.get_serializer_context()).data},
             status=status.HTTP_201_CREATED,
@@ -180,17 +206,37 @@ class TaskStatusViewSet(viewsets.ModelViewSet):
         from .serializers import TaskStatusSerializer
         return TaskStatusSerializer
 
+    # def get_queryset(self):
+    #     queryset = TaskStatus.objects.all()
+    #     project_id = self.request.query_params.get('project')
+    #     if project_id:
+    #         # SECURITY: Only return statuses for projects the user is a member of
+    #         queryset = queryset.filter(project_id=project_id, project__members=self.request.user)
+    #     return queryset
+
     def get_queryset(self):
         queryset = TaskStatus.objects.all()
         project_id = self.request.query_params.get('project')
+        
         if project_id:
-            queryset = queryset.filter(project_id=project_id)
+            # SUPER ADMIN OVERRIDE: Can see all columns
+            if self.request.user.is_superuser:
+                queryset = queryset.filter(project_id=project_id)
+            else:
+                # REGULAR USER: Only see columns if they are a project member
+                queryset = queryset.filter(project_id=project_id, project__members=self.request.user)
+                
         return queryset
 
     def perform_create(self, serializer):
         project_id = self.request.data.get('project')
         name = self.request.data.get('name', '')
         slug = self.request.data.get('slug')
+
+        # SECURITY: Check project membership before creating a status
+        project = Project.objects.filter(id=project_id, members=self.request.user).first()
+        if not project:
+            raise serializers.ValidationError({"error": "You do not have access to this project."})
 
         # Auto-generate slug if not provided
         if not slug and name:
@@ -209,7 +255,7 @@ class TaskStatusViewSet(viewsets.ModelViewSet):
         serializer.save(
             project_id=project_id, 
             slug=slug,
-            order=max_order # Automatically puts the new column at the end of the board
+            order=max_order
         )
         
 class TaskCommentViewSet(viewsets.ModelViewSet):

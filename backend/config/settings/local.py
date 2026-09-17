@@ -9,6 +9,12 @@ MIDDLEWARE += ["debug_toolbar.middleware.DebugToolbarMiddleware"]
 
 INTERNAL_IPS = ["127.0.0.1", "localhost"]
 
+# Print emails to the terminal console instead of sending them
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_HOST = "localhost"
+EMAIL_PORT = 1025
+DEFAULT_FROM_EMAIL = "noreply@projectflow.com"
+
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {

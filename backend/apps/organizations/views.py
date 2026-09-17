@@ -1,9 +1,13 @@
+from django.core.mail import send_mail
+from django.conf import settings
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Organization, OrganizationMember
+from .models import Organization, OrganizationMember, OrganizationInvite
+from django.contrib.auth import get_user_model
+User = get_user_model()
 from .serializers import (
     OrganizationSerializer,
     CreateOrganizationSerializer,
@@ -120,28 +124,60 @@ class OrganizationViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def invite(self, request, pk=None):
         org = self.get_object()
-        serializer = InviteMemberSerializer(
-            data=request.data,
-            context={"organization": org}
-        )
-        serializer.is_valid(raise_exception=True)
+        email = request.data.get("email")
+        role = request.data.get("role", "member")
         
-        member = OrganizationMember.objects.create(
-            organization=org,
-            user=serializer.validated_data["user"],
-            role=serializer.validated_data["role"],
-            invited_by=request.user,
+        if not email:
+            return Response({"error": "Email is required."}, status=400)
+            
+        # 1. Check if user is already a member
+        existing_user = User.objects.filter(email=email).first()
+        if existing_user and org.membership_set.filter(user=existing_user).exists():
+            return Response({"error": "User is already a member."}, status=400)
+            
+        # 2. Check if there's already a pending invite
+        if OrganizationInvite.objects.filter(organization=org, email=email, accepted_at__isnull=True).exists():
+            return Response({"error": "User has already been invited."}, status=400)
+            
+        # 3. If user exists but isn't a member, add them directly!
+        if existing_user:
+            OrganizationMember.objects.create(
+                organization=org, user=existing_user, role=role, invited_by=request.user
+            )
+            return Response({"success": True, "message": "Existing user added to organization."})
+            
+        # 3. If user doesn't exist, create a pending invite
+        # But first, check if we already invited them
+        invite, created = OrganizationInvite.objects.get_or_create(
+            organization=org, 
+            email=email,
+            defaults={"role": role, "invited_by": request.user}
+        )
+
+        if not created:
+            # If the invite already existed, just update the role
+            invite.role = role
+            invite.save()       
+        
+        
+        # 5. Send the invitation email
+        registration_link = f"http://localhost:5173/auth/register?token={invite.token}"
+        send_mail(
+            subject=f"You're invited to join {org.name} on ProjectFlow",
+            message=f"You have been invited to join {org.name}.\n\nPlease click the following link to register your account:\n{registration_link}",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            fail_silently=True,
         )
         
         return Response(
             {
-                "success": True,
-                "message": f"User invited to {org.name}.",
-                "member": OrganizationMemberSerializer(member).data,
+                "success": True, 
+                "message": f"Invitation email sent to {email}. They will appear in your team list once they register."
             },
             status=status.HTTP_201_CREATED,
         )
-    
+
     @action(detail=True, methods=["post"])
     def leave(self, request, pk=None):
         org = self.get_object()
