@@ -1,7 +1,8 @@
 from apps.notifications.models import Notification
 from apps.tasks.models import Task
 from rest_framework import serializers, status, viewsets
-from django.db.models import Count
+from django.db.models import Count, Sum
+from django.utils import timezone
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -226,9 +227,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get"])
     def report(self, request, pk=None):
         project = self.get_object()
-        from django.db.models import Sum
-        from django.utils import timezone
-
+        
         # 1. By Status
         status_data = Task.objects.filter(project=project).values('status__name', 'status__color').annotate(count=Count('id'))
         
@@ -274,6 +273,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         
         return Response({
             "success": True,
+            "project_name": project.name,
             "task_by_status": list(status_data),
             "task_by_priority": list(priority_data),
             "task_by_assignee": list(workload_data),

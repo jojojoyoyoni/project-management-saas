@@ -1,6 +1,12 @@
+
+from django.utils import timezone
 from django.core.mail import send_mail
 from django.conf import settings
+from django.db.models import Count, Sum
+from django.db.models.functions import TruncDate
 from apps.notifications.models import Notification
+from apps.tasks.models import Task
+from apps.projects.models import Project
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -251,3 +257,68 @@ class OrganizationViewSet(viewsets.ModelViewSet):
             )
         
         return Response({"success": True, "message": "Member removed."})
+
+
+    @action(detail=True, methods=["get"])
+    def dashboard(self, request, pk=None):
+        org = self.get_object()
+        
+        # 1. Get all active projects for this org
+        projects = Project.objects.filter(organization=org, status="active")
+        total_projects = projects.count()
+        
+        # 2. Aggregate all tasks across all projects in the org
+        all_tasks = Task.objects.filter(project__in=projects)
+        total_tasks = all_tasks.count()
+        done_tasks = all_tasks.filter(status__slug="done").count()
+        
+        overall_completion = (done_tasks / total_tasks * 100) if total_tasks > 0 else 0
+        
+        overdue_tasks = all_tasks.filter(
+            due_date__lt=timezone.now().date()
+        ).exclude(status__slug="done").count()
+        
+        # --- NEW: CHART DATA ---
+        
+        # 3. Pie Chart: Task distribution by Status
+        status_data = all_tasks.values(
+            'status__name', 'status__color'
+        ).annotate(count=Count('id'))
+        
+        # 4. Line Chart: Task completion trend (Last 7 days)
+        seven_days_ago = timezone.now().date() - timezone.timedelta(days=7)
+        trend_data = all_tasks.filter(
+            status__slug="done", 
+            completed_at__isnull=False,
+            completed_at__date__gte=seven_days_ago
+        ).annotate(
+            date=TruncDate('completed_at')
+        ).values('date').annotate(count=Count('id')).order_by('date')
+        
+        # 5. Get per-project breakdown for the table
+        project_breakdown = []
+        for p in projects:
+            p_total = p.tasks.count()
+            p_done = p.tasks.filter(status__slug="done").count()
+            p_progress = (p_done / p_total * 100) if p_total > 0 else 0
+            
+            project_breakdown.append({
+                "id": p.id,
+                "name": p.name,
+                "key": p.key,
+                "total_tasks": p_total,
+                "completion_rate": round(p_progress, 2)
+            })
+        
+        return Response({
+            "success": True,
+            "stats": {
+                "total_projects": total_projects,
+                "total_tasks": total_tasks,
+                "overall_completion": round(overall_completion, 2),
+                "overdue_tasks": overdue_tasks,
+            },
+            "task_by_status": list(status_data),
+            "completion_trend": list(trend_data),
+            "projects": project_breakdown
+        })

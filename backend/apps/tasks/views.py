@@ -1,3 +1,4 @@
+from django.utils import timezone
 from apps.notifications.models import Notification
 from rest_framework import status, viewsets, serializers
 from rest_framework.decorators import action
@@ -129,6 +130,44 @@ class TaskViewSet(viewsets.ModelViewSet):
     #     )
 
 
+    # def update(self, request, *args, **kwargs):
+    #     partial = kwargs.pop("partial", False)
+    #     instance = self.get_object()
+        
+    #     old_assignee = instance.assignee
+    #     old_status = instance.status
+        
+    #     serializer = self.get_serializer(instance, data=request.data, partial=partial)
+    #     serializer.is_valid(raise_exception=True)
+    #     task = serializer.save()
+        
+    #     # NOTIFICATION 2: Assignee changed
+    #     new_assignee = task.assignee
+    #     if new_assignee and new_assignee != old_assignee:
+    #         if new_assignee != request.user:
+    #             Notification.objects.create(
+    #                 recipient=new_assignee,
+    #                 actor=request.user,
+    #                 task=task,
+    #                 verb=f"assigned you to task: {task.title}"
+    #             )
+                
+    #     # NOTIFICATION 3: Status changed to "Done"
+    #     if old_status != task.status and task.status and task.status.slug == "done":
+    #         # Notify the reporter that the task is done
+    #         if task.reporter and task.reporter != request.user:
+    #             Notification.objects.create(
+    #                 recipient=task.reporter,
+    #                 actor=request.user,
+    #                 task=task,
+    #                 verb=f"completed the task: {task.title}"
+    #             )
+        
+    #     return Response(
+    #         {"success": True, "task": TaskDetailSerializer(task, context=self.get_serializer_context()).data},
+    #     )
+    
+
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
@@ -140,7 +179,25 @@ class TaskViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         task = serializer.save()
         
-        # NOTIFICATION 2: Assignee changed
+        # FIX: If status changed to "done", record the completion time!
+        if old_status != task.status and task.status and task.status.slug == "done":
+            task.completed_at = timezone.now()
+            task.save()
+            
+            # Notify the reporter that the task is done
+            if task.reporter and task.reporter != request.user:
+                Notification.objects.create(
+                    recipient=task.reporter,
+                    actor=request.user,
+                    task=task,
+                    verb=f"completed the task: {task.title}"
+                )
+        # Optional: If a task is moved OUT of "done", clear the completed_at date
+        elif old_status and old_status.slug == "done" and task.status.slug != "done":
+            task.completed_at = None
+            task.save()
+        
+        # NOTIFICATION: Assignee changed
         new_assignee = task.assignee
         if new_assignee and new_assignee != old_assignee:
             if new_assignee != request.user:
@@ -150,22 +207,10 @@ class TaskViewSet(viewsets.ModelViewSet):
                     task=task,
                     verb=f"assigned you to task: {task.title}"
                 )
-                
-        # NOTIFICATION 3: Status changed to "Done"
-        if old_status != task.status and task.status and task.status.slug == "done":
-            # Notify the reporter that the task is done
-            if task.reporter and task.reporter != request.user:
-                Notification.objects.create(
-                    recipient=task.reporter,
-                    actor=request.user,
-                    task=task,
-                    verb=f"completed the task: {task.title}"
-                )
         
         return Response(
             {"success": True, "task": TaskDetailSerializer(task, context=self.get_serializer_context()).data},
         )
-    
     def partial_update(self, request, *args, **kwargs):
         kwargs["partial"] = True
         return self.update(request, *args, **kwargs)
