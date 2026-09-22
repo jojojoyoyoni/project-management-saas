@@ -1,5 +1,6 @@
 from django.core.mail import send_mail
 from django.conf import settings
+from apps.notifications.models import Notification
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -29,12 +30,13 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         # )
         user = self.request.user
         
-        # SUPER ADMIN: Can see all organizations on the platform
+        # Super Admins can see all orgs (even archived ones if they want, 
+       
         if user.is_superuser:
-            return Organization.objects.all().order_by('-created_at')
+            return Organization.objects.filter(is_active=True).order_by('-created_at')
         
-        # REGULAR USER: Can only see organizations they belong to
-        return Organization.objects.filter(members=user).order_by('-created_at')
+        # Regular users only see active orgs they are members of
+        return Organization.objects.filter(members=user, is_active=True).order_by('-created_at')
     
     def get_serializer_class(self):
         if self.action == "create":
@@ -55,24 +57,31 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         return self.get_paginated_response(serializer.data)
     
     def create(self, request, *args, **kwargs):
-
-                # RESTRICTION: Check if user already owns an organization
         if Organization.objects.filter(owner=request.user).exists():
             return Response(
                 {"error": "You already own an organization. You can only create one."},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        # If not, proceed with normal creation
+        
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        org = serializer.save()
+        
+        # FIX: Don't pass owner=request.user here, the serializer handles it!
+        org = serializer.save() 
 
-        # Add the creator as an 'owner' member
-        OrganizationMember.objects.create(
+        OrganizationMember.objects.get_or_create(
             organization=org,
             user=request.user,
-            role="owner"
+            defaults={"role": "owner"}
         )
+        
+        # Notify all Super Admins that a new org was created
+        super_admins = User.objects.filter(is_superuser=True).exclude(id=request.user.id)
+        admin_notifications = [
+            Notification(recipient=admin, actor=request.user, verb=f"created a new organization: {org.name}")
+            for admin in super_admins
+        ]
+        Notification.objects.bulk_create(admin_notifications)
         
         return Response(
             {
@@ -82,8 +91,6 @@ class OrganizationViewSet(viewsets.ModelViewSet):
             },
             status=status.HTTP_201_CREATED,
         )
-        
-    
     def retrieve(self, request, *args, **kwargs):
         org = self.get_object()
         return Response({
@@ -97,6 +104,14 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         serializer = CreateOrganizationSerializer(org, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+
+        # NOTIFICATION: Notify Org Admins/Members that the org details were updated
+        members = org.members.exclude(id=request.user.id).exclude(is_superuser=True)
+        notifications = [
+            Notification(recipient=member, actor=request.user, verb=f"updated the organization details for: {org.name}")
+            for member in members
+        ]
+        Notification.objects.bulk_create(notifications)
         
         return Response({
             "success": True,
@@ -109,8 +124,22 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         return self.update(request, *args, **kwargs)
     
     def destroy(self, request, *args, **kwargs):
-        self.get_object().delete()
-        return Response({"success": True, "message": "Organization deleted."})
+        org = self.get_object()
+        org_name = org.name
+        
+        # SOFT DELETE: Archive instead of permanent deletion
+        org.is_active = False
+        org.save()
+        
+        # NOTIFICATION: Notify all members that the org is archived
+        members = org.members.exclude(id=request.user.id)
+        notifications = [
+            Notification(recipient=member, actor=request.user, verb=f"archived the organization: {org_name}")
+            for member in members
+        ]
+        Notification.objects.bulk_create(notifications)
+        
+        return Response({"success": True, "message": "Organization archived successfully."})
     
     @action(detail=True, methods=["get"])
     def members(self, request, pk=None):

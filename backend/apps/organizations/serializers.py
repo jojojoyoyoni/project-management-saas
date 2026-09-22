@@ -53,40 +53,65 @@ class OrganizationSerializer(serializers.ModelSerializer):
         return None
 
 
+# class CreateOrganizationSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Organization
+#         fields = ["name", "description", "logo"]
+#         read_only_fields = ["slug", "plan"]
+
+#     # ADD THIS METHOD to check for duplicate names
+#     def validate_name(self, value):
+#         # iexact means it's case-insensitive (e.g., "Acme" and "acme" are the same)
+#         if Organization.objects.filter(name__iexact=value).exists():
+#             raise serializers.ValidationError("An organization with this name already exists.")
+#         return value
+    
+#     def create(self, validated_data):
+#         from core.utils import generate_unique_key
+        
+#         user = self.context["request"].user
+        
+#         org = Organization(
+#             **validated_data,
+#             slug=generate_unique_key(Organization, "slug", length=8),
+#             owner=user,
+#         )
+#         org.save()
+        
+#         OrganizationMember.objects.create(
+#             organization=org,
+#             user=user,
+#             role=OrganizationMember.Role.OWNER,
+#             invited_by=user,
+#         )
+        
+#         return org
 class CreateOrganizationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organization
-        fields = ["name", "description", "logo"]
+        fields = ["name", "description", "logo", "slug", "plan"]
         read_only_fields = ["slug", "plan"]
 
-    # ADD THIS METHOD to check for duplicate names
     def validate_name(self, value):
-        # iexact means it's case-insensitive (e.g., "Acme" and "acme" are the same)
         if Organization.objects.filter(name__iexact=value).exists():
             raise serializers.ValidationError("An organization with this name already exists.")
         return value
-    
-    def create(self, validated_data):
-        from core.utils import generate_unique_key
-        
-        user = self.context["request"].user
-        
-        org = Organization(
-            **validated_data,
-            slug=generate_unique_key(Organization, "slug", length=8),
-            owner=user,
-        )
-        org.save()
-        
-        OrganizationMember.objects.create(
-            organization=org,
-            user=user,
-            role=OrganizationMember.Role.OWNER,
-            invited_by=user,
-        )
-        
-        return org
 
+    def create(self, validated_data):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            raise serializers.ValidationError("User must be authenticated.")
+            
+        import uuid
+        slug = str(uuid.uuid4().hex[:8].upper())
+        
+        # The serializer sets the owner here
+        org = Organization.objects.create(
+            owner=request.user,
+            slug=slug,
+            **validated_data
+        )
+        return org
 
 class InviteMemberSerializer(serializers.Serializer):
     email = serializers.EmailField()

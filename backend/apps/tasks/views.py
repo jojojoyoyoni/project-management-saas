@@ -1,3 +1,4 @@
+from apps.notifications.models import Notification
 from rest_framework import status, viewsets, serializers
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -18,7 +19,7 @@ from apps.projects.permissions import IsProjectMember
 
 
 class TaskViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsProjectMember]
     search_fields = ["title", "description"]
     filterset_fields = ["status", "priority", "assignee", "task_type"]
     ordering_fields = ["created_at", "updated_at", "due_date", "task_number", "priority"]
@@ -30,24 +31,6 @@ class TaskViewSet(viewsets.ModelViewSet):
         context['project_id'] = self.kwargs.get('project_id')
         return context
     
-    # def get_queryset(self):
-    #     project_id = self.kwargs.get("project_id")
-    #     user = self.request.user
-
-    #     if not project_id:
-    #         return Task.objects.none()
-
-    #     # STRICT SECURITY: Only return tasks where:
-    #     # 1. The task belongs to this specific project
-    #     # 2. The user is explicitly a member of THIS project
-    #     return Task.objects.filter(
-    #         project_id=project_id,
-    #         project__members=user 
-    #     ).select_related(
-    #         "project", "status", "priority", "assignee", "reporter", "parent"
-    #     ).prefetch_related(
-    #         "watchers",
-    #     )
 
     def get_queryset(self):
         project_id = self.kwargs.get("project_id")
@@ -120,21 +103,67 @@ class TaskViewSet(viewsets.ModelViewSet):
             action="created",
             description=f"Created task: {task.title}",
         )
+        # NOTIFICATION 1: If task is assigned to someone on creation
+        if task.assignee and task.assignee != request.user:
+            Notification.objects.create(
+                recipient=task.assignee,
+                actor=request.user,
+                task=task,
+                verb=f"assigned you to a new task: {task.title}"
+            )
         
         return Response(
-            {"success": True, "task": TaskDetailSerializer(task).data},
+            {"success": True, "task": TaskDetailSerializer(task, context=self.get_serializer_context()).data},
             status=status.HTTP_201_CREATED,
         )
-    
+        
+    # def update(self, request, *args, **kwargs):
+    #     partial = kwargs.pop("partial", False)
+    #     instance = self.get_object()
+    #     serializer = self.get_serializer(instance, data=request.data, partial=partial)
+    #     serializer.is_valid(raise_exception=True)
+    #     serializer.save()
+        
+    #     return Response(
+    #         {"success": True, "task": TaskDetailSerializer(instance, context=self.get_serializer_context()).data},
+    #     )
+
+
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
         instance = self.get_object()
+        
+        old_assignee = instance.assignee
+        old_status = instance.status
+        
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        task = serializer.save()
+        
+        # NOTIFICATION 2: Assignee changed
+        new_assignee = task.assignee
+        if new_assignee and new_assignee != old_assignee:
+            if new_assignee != request.user:
+                Notification.objects.create(
+                    recipient=new_assignee,
+                    actor=request.user,
+                    task=task,
+                    verb=f"assigned you to task: {task.title}"
+                )
+                
+        # NOTIFICATION 3: Status changed to "Done"
+        if old_status != task.status and task.status and task.status.slug == "done":
+            # Notify the reporter that the task is done
+            if task.reporter and task.reporter != request.user:
+                Notification.objects.create(
+                    recipient=task.reporter,
+                    actor=request.user,
+                    task=task,
+                    verb=f"completed the task: {task.title}"
+                )
         
         return Response(
-            {"success": True, "task": TaskDetailSerializer(instance, context=self.get_serializer_context()).data},
+            {"success": True, "task": TaskDetailSerializer(task, context=self.get_serializer_context()).data},
         )
     
     def partial_update(self, request, *args, **kwargs):
@@ -205,14 +234,6 @@ class TaskStatusViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         from .serializers import TaskStatusSerializer
         return TaskStatusSerializer
-
-    # def get_queryset(self):
-    #     queryset = TaskStatus.objects.all()
-    #     project_id = self.request.query_params.get('project')
-    #     if project_id:
-    #         # SECURITY: Only return statuses for projects the user is a member of
-    #         queryset = queryset.filter(project_id=project_id, project__members=self.request.user)
-    #     return queryset
 
     def get_queryset(self):
         queryset = TaskStatus.objects.all()
@@ -300,8 +321,26 @@ class TaskCommentViewSet(viewsets.ModelViewSet):
             raise PermissionDenied(
                 "You do not have access to this task."
             )
+            
+        # 1. Save the comment ONCE
+        serializer.save(task=task, author=self.request.user)
 
-        serializer.save(
-            task=task,
-            author=self.request.user,
-        )
+        
+        # 2. Create the notification
+        recipients = set()
+        if task.assignee:
+            recipients.add(task.assignee)
+        if task.reporter:
+            recipients.add(task.reporter)
+            
+        for recipient in recipients:
+            if recipient != self.request.user:
+                Notification.objects.create(
+                    recipient=recipient,
+                    actor=self.request.user,
+                    task=task,
+                    project=task.project,
+                    verb=f"commented on task: {task.title}"
+                )
+        
+        # NO SECOND serializer.save() HERE!

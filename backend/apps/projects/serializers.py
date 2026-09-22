@@ -72,29 +72,22 @@ class ProjectDetailSerializer(ProjectListSerializer):
 
 
 class CreateProjectSerializer(serializers.ModelSerializer):
-    """
-    Serializer for creating/updating projects.
-    
-    Validates:
-    - Key is unique within organization
-    - End date is after start date
-    """
-    
     class Meta:
         model = Project
-        fields = ["name", "description", "key", "priority", "start_date", "end_date"]
-    
+        fields = ["name", "description", "key", "priority", "start_date", "end_date", "organization"]
+
     def validate_key(self, value):
-        """Ensure key is unique within the organization."""
-        org_id = self.context.get("organization_id")
+        # Get the organization ID from the incoming data
+        org_id = self.initial_data.get("organization")
+        
+        # Check if a project with this key already exists in this organization
         if org_id and Project.objects.filter(organization_id=org_id, key=value.upper()).exists():
             raise serializers.ValidationError(
-                f"Project key '{value}' already exists in this organization."
+                f"A project with the key '{value}' already exists in this organization."
             )
         return value.upper()
-    
+
     def validate(self, attrs):
-        """End date must be after start date."""
         start = attrs.get("start_date")
         end = attrs.get("end_date")
         if start and end and end < start:

@@ -6,6 +6,7 @@ from django.http import JsonResponse
 from rest_framework.routers import DefaultRouter
 
 from apps.tasks.views import TaskStatusViewSet
+from apps.notifications.views import NotificationViewSet
 
 # Router for Task Statuses (Kanban Columns)
 status_router = DefaultRouter()
@@ -48,6 +49,10 @@ urlpatterns = [
     
     # Health check
     path("api/health/", include("core.urls")),
+
+    # Notifications
+    path('api/notifications/', NotificationViewSet.as_view({'get': 'list', 'post': 'mark_all_read'}), name='notifications'),
+
 ]
 
 # Only add docs if package is installed

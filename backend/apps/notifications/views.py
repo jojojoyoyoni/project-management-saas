@@ -2,31 +2,23 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
 from .models import Notification
 from .serializers import NotificationSerializer
 
-class NotificationViewSet(viewsets.GenericViewSet):
+class NotificationViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
-    serializer_class = NotificationSerializer
-    
-    def get_queryset(self):
-        return Notification.objects.filter(recipient=self.request.user)
-    
-    @action(detail=False, methods=["get"])
-    def unread(self, request):
-        notifications = self.get_queryset().filter(is_read=False)[:20]
-        serializer = self.get_serializer(notifications, many=True)
-        return Response({"success": True, "notifications": serializer.data, "count": notifications.count()})
-    
+
+    def list(self, request):
+        # Only get notifications for the current user
+        queryset = Notification.objects.filter(recipient=request.user)[:15]
+        unread_count = Notification.objects.filter(recipient=request.user, is_read=False).count()
+        
+        return Response({
+            "results": NotificationSerializer(queryset, many=True).data,
+            "unread_count": unread_count
+        })
+
     @action(detail=False, methods=["post"])
     def mark_all_read(self, request):
-        self.get_queryset().filter(is_read=False).update(is_read=True)
-        return Response({"success": True, "message": "All notifications marked as read"})
-    
-    @action(detail=True, methods=["post"])
-    def mark_read(self, request, pk=None):
-        notification = self.get_object()
-        notification.is_read = True
-        notification.save()
+        Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
         return Response({"success": True})
