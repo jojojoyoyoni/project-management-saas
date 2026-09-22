@@ -4,17 +4,16 @@ import Button from '@/components/common/Button'
 import Spinner from '@/components/common/Spinner'
 
 interface ProjectTeamModalProps {
-  orgId: string
   projectId: string
   onClose: () => void
 }
 
-export default function ProjectTeamModal({ orgId, projectId, onClose }: ProjectTeamModalProps) {
-  const { data: rawMembers, isLoading } = useProjectMembers(orgId, projectId)
+export default function ProjectTeamModal({ projectId, onClose }: ProjectTeamModalProps) {
+  const { data: rawMembers, isLoading } = useProjectMembers(projectId)
   const members = rawMembers?.members || rawMembers || []
-  const inviteMember = useInviteMember(orgId, projectId)
-  const updateRole = useUpdateMemberRole(orgId, projectId)
-  const removeMember = useRemoveMember(orgId, projectId)
+  const inviteMember = useInviteMember(projectId)
+  const updateRole = useUpdateMemberRole(projectId)
+  const removeMember = useRemoveMember(projectId)
 
   const [search, setSearch] = useState('')
   const [role, setRole] = useState('viewer')

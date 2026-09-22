@@ -6,10 +6,13 @@ import {
   getProjectMembers, 
   inviteProjectMember, 
   updateMemberRole, 
-  removeProjectMember 
+  removeProjectMember, 
+  deleteProject,
+  getProjectReport
 } from '@/api/queries/projectQueries'
 import { useAppSelector } from '@/store'
 import type { CreateProjectValues } from '@/types/project'
+import { useNavigate } from 'react-router-dom'
 
 export const useProjects = () => {
   return useQuery({
@@ -68,5 +71,27 @@ export const useRemoveMember = (projectId: string) => {
   return useMutation({
     mutationFn: (memberId: string) => removeProjectMember({ projectId, memberId }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['projectMembers', projectId] })
+  })
+}
+
+export const useDeleteProject = () => {
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
+
+  return useMutation({
+    mutationFn: (projectId: string) => deleteProject(projectId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: projectKeys.all })
+      navigate('/projects') // Go back to the projects list after deletion
+    }
+  })
+}
+
+// Add this hook
+export const useProjectReport = (projectId: string | null) => {
+  return useQuery({
+    queryKey: ['projectReport', projectId],
+    queryFn: () => getProjectReport(projectId!),
+    enabled: !!projectId,
   })
 }

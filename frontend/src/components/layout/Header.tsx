@@ -3,12 +3,21 @@ import { FaRegBell, FaMagnifyingGlass, FaSun, FaMoon, FaRightFromBracket } from 
 import { useTheme } from '@/context/ThemeContext'
 import { useLogout } from '@/api/hooks/useAuth'
 import { useAppSelector } from '@/store'
+import { useNotifications } from '@/api/hooks/useNotifications'
+import NotificationPanel from './NotificationPanel'
+import { useState } from 'react'
 
 export default function Header() {
   const { theme, toggleTheme } = useTheme()
   const isDark = theme === 'dark'
   const logoutMutation = useLogout()
   const navigate = useNavigate()
+
+    // Fetch notifications to get the unread count for the red badge
+  const { data: notifData } = useNotifications()
+  const unreadCount = notifData?.unread_count || 0
+  
+  const [isNotifOpen, setIsNotifOpen] = useState(false)
   
   // Get user from Redux for the avatar initial
   const { user } = useAppSelector((state) => state.auth)
@@ -39,12 +48,20 @@ export default function Header() {
           {isDark ? <FaSun className="h-5 w-5 text-yellow-400" /> : <FaMoon className="h-5 w-5" />}
         </button>
 
-        {/* Notifications */}
-        <button className="relative p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors" title="Notifications">
-          <FaRegBell className="h-5 w-5" />
-          <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800" />
-        </button>
-
+        {/* Notifications Wrapper */}
+        <div className="relative">
+          <button 
+            onClick={() => setIsNotifOpen(!isNotifOpen)}
+            className="relative p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+          >
+            <FaRegBell className="h-5 w-5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-800" />
+            )}
+          </button>
+          
+          {isNotifOpen && <NotificationPanel />}
+        </div>
         {/* User Avatar -> Links to Settings */}
         <button 
           onClick={() => navigate('/settings')}

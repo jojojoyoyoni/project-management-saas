@@ -58,3 +58,13 @@ export const removeProjectMember = async ({ projectId, memberId }: {
     body: JSON.stringify({ member_id: memberId }),
   })
 }
+
+export const deleteProject = async (projectId: string) => {
+  return apiClient(`/projects/${projectId}/`, {
+    method: 'DELETE',
+  })
+}
+
+export const getProjectReport = async (projectId: string) => {
+  return apiClient(`/projects/${projectId}/report/`)
+}
