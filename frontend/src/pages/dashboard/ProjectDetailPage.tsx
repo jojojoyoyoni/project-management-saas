@@ -44,7 +44,7 @@ export default function ProjectDetailPage() {
     <div className="space-y-6 h-[calc(100vh-10rem)] flex flex-col">
       
       {/* Header & Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+      <div className="print:hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 dark:border-gray-700 pb-4 flex-shrink-0">
         <div className="flex items-center space-x-4">
           <button 
             onClick={() => setActiveTab('board')}

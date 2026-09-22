@@ -44,7 +44,7 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="flex flex-col w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-screen">
+    <aside className="print:hidden flex flex-col w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 h-screen">
       {/* Logo Header */}
       <div className="flex items-center h-16 px-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <FaBolt className="text-indigo-600 text-2xl mr-2" />

@@ -7,3 +7,63 @@
     @apply font-sans text-gray-900 bg-white dark:text-gray-100 dark:bg-gray-900;
   }
 }
+
+@media print {
+  @page {
+    margin: 1.5cm; /* Add margins to the printed pages */
+  }
+
+  /* FORCE HIDE Sidebar and Header */
+  aside, header, nav {
+    display: none !important;
+  }
+
+  /* Reset layout containers for printing */
+  main, 
+  .flex-1, 
+  .h-screen, 
+  .h-\[calc\(100vh-10rem\)\] {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    display: block !important;
+    padding: 0 !important;
+  }
+
+  body, #root {
+    overflow: visible !important;
+    height: auto !important;
+    position: static !important;
+  }
+
+  /* FORCE light mode and borders for printing */
+  body, .dark\:bg-gray-800, .dark\:bg-gray-900, .dark\:bg-gray-50 {
+    background-color: white !important;
+    color: black !important;
+  }
+
+  .dark\:text-white, .dark\:text-gray-300, .dark\:text-gray-400 {
+    color: #111827 !important; /* Force dark text */
+  }
+
+  /* Ensure cards have borders and don't break */
+  .bg-white {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    box-shadow: none !important;
+    border: 1px solid #d1d5db !important; /* Light gray border for cards */
+    -webkit-print-color-adjust: exact !important; 
+    print-color-adjust: exact !important;
+  }
+  
+  /* Force chart colors to print correctly */
+  .recharts-wrapper, svg, .recharts-surface {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  /* Repeat table headers on each page */
+  thead {
+    display: table-header-group;
+  }
+}

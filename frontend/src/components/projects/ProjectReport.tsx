@@ -1,7 +1,9 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { useProjectReport } from '@/api/hooks/useProjects'
+import { useParams } from 'react-router-dom'
+import { useAppSelector } from '@/store'
 import Spinner from '@/components/common/Spinner'
-import { FaCircleExclamation, FaClock, FaListCheck, FaChartPie } from 'react-icons/fa6'
+import { FaCircleExclamation, FaClock, FaListCheck, FaChartPie, FaFilePdf } from 'react-icons/fa6'
 
 interface ProjectReportProps {
   projectId: string
@@ -9,28 +11,34 @@ interface ProjectReportProps {
 
 export default function ProjectReport({ projectId }: ProjectReportProps) {
   const { data, isLoading } = useProjectReport(projectId)
-  // Fix: Do the loading check BEFORE calling the hook
+  
+  // Get current logged-in user from Redux
+  const { user } = useAppSelector((state) => state.auth)
+  const senderName = user?.first_name ? `${user.first_name} ${user.last_name}` : 'Unknown User'
+  const projectName = data?.project_name || "Unknown Project"
+
   if (isLoading) return <div className="flex justify-center py-12"><Spinner /></div>
-  // 1. Format Status Data for Pie Chart
+
+  // Format Status Data for Pie Chart
   const statusData = data?.task_by_status?.map((item: any) => ({
     name: item.status__name || 'Unassigned',
     value: item.count,
     color: item.status__color || '#6366f1'
   })) || []
 
-  // 2. Format Priority Data for Bar Chart
+  // Format Priority Data for Bar Chart
   const priorityData = data?.task_by_priority?.map((item: any) => ({
     name: item.priority__name || 'None',
     count: item.count
   })) || []
 
-  // 3. Format Assignee Data for Workload Chart
+  // Format Assignee Data for Workload Chart
   const workloadData = data?.task_by_assignee?.map((item: any) => ({
     name: item.assignee__username || 'Unassigned',
     tasks: item.count
   })) || []
 
-  // 4. Format Task Type Data
+  // Format Task Type Data
   const typeData = data?.task_by_type?.map((item: any) => ({
     name: item.task_type || 'Task',
     value: item.count
@@ -41,77 +49,50 @@ export default function ProjectReport({ projectId }: ProjectReportProps) {
   const totalSpent = data?.time_tracking?.total_spent || 0
   const timeProgress = totalEstimated > 0 ? (totalSpent / totalEstimated) * 100 : 0
 
+  // PDF Export function
+  const handleExportPDF = () => {
+    window.print()
+  }
+
   return (
     <div className="space-y-6 pb-8">
+      
+      {/* --- PRINT ONLY HEADER --- */}
+      <div className="hidden print:block mb-8">
+        <div className="flex justify-between items-start border-b-2 border-gray-800 pb-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">ProjectFlow</h1>
+            <h2 className="text-xl font-semibold text-gray-700 mt-1">{projectName} - Status Report</h2>
+          </div>
+          <div className="text-right">
+            <p className="text-sm font-medium text-gray-600">Prepared by:</p>
+            <p className="text-lg font-bold text-gray-900">{senderName}</p>
+            <p className="text-sm text-gray-500 mt-2">Generated on: {new Date().toLocaleDateString()}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Screen Header & Export Button */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Project Analytics</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Track progress, workload, and task health.</p>
+        </div>
+        <button 
+          onClick={handleExportPDF}
+          className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors shadow-sm"
+        >
+          <FaFilePdf className="h-4 w-4" />
+          Export Report
+        </button>
+      </div>
+
       {/* Top Stats Cards (Grid) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard 
-          icon={<FaListCheck />} 
-          label="Total Tasks" 
-          value={data?.stats?.total_tasks || 0} 
-          color="indigo" 
-        />
-        <StatCard 
-          icon={<FaChartPie />} 
-          label="Completion Rate" 
-          value={`${data?.stats?.completion_rate || 0}%`} 
-          color="green" 
-        />
-        <StatCard 
-          icon={<FaCircleExclamation />} 
-          label="Overdue Tasks" 
-          value={data?.overdue_count || 0} 
-          color="red" 
-        />
-        <StatCard 
-          icon={<FaClock />} 
-          label="Time Spent (hrs)" 
-          value={totalSpent} 
-          color="blue" 
-        />
-      </div>
-            {/* Actionable Lists (Tables) */}
-      <div className="grid grid-cols-1 gap-6">
-        {/* Overdue Tasks Table */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-          <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-4 flex items-center gap-2">
-            <FaCircleExclamation /> Action Required: Overdue Tasks
-          </h3>
-          
-          {data?.overdue_tasks?.length === 0 ? (
-            <div className="text-center py-8 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-800">
-              <p className="text-sm font-medium text-green-600 dark:text-green-400">🎉 No overdue tasks! Everything is on track.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-700/50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Task</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Assignee</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Due Date</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {data?.overdue_tasks?.map((task: any) => (
-                    <tr key={task.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-xs font-mono text-gray-400">{task.key}</div>
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">{task.title}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {task.assignee__username || 'Unassigned'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 dark:text-red-400 font-medium">
-                        {new Date(task.due_date).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        <StatCard icon={<FaListCheck />} label="Total Tasks" value={data?.stats?.total_tasks || 0} color="indigo" />
+        <StatCard icon={<FaChartPie />} label="Completion Rate" value={`${data?.stats?.completion_rate || 0}%`} color="green" />
+        <StatCard icon={<FaCircleExclamation />} label="Overdue Tasks" value={data?.overdue_count || 0} color="red" />
+        <StatCard icon={<FaClock />} label="Time Spent (hrs)" value={totalSpent} color="blue" />
       </div>
 
       {/* Charts Grid */}
@@ -124,8 +105,8 @@ export default function ProjectReport({ projectId }: ProjectReportProps) {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie data={statusData} cx="50%" cy="50%" labelLine={false} outerRadius={80} fill="#8884d8" dataKey="value">
-                  {statusData.map((entry: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  {statusData.map((entry: { color: string, index: number }) => (
+                    <Cell key={`cell-${entry.index}`} fill={entry.color} />            
                   ))}
                 </Pie>
                 <Tooltip />
@@ -203,7 +184,50 @@ export default function ProjectReport({ projectId }: ProjectReportProps) {
             </ResponsiveContainer>
           </div>
         </div>
+      </div>
 
+      {/* Actionable Lists (Tables) */}
+      <div className="grid grid-cols-1 gap-6">
+        {/* Overdue Tasks Table */}
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+          <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-4 flex items-center gap-2">
+            <FaCircleExclamation /> Action Required: Overdue Tasks
+          </h3>
+          
+          {data?.overdue_tasks?.length === 0 ? (
+            <div className="text-center py-8 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-200 dark:border-green-800">
+              <p className="text-sm font-medium text-green-600 dark:text-green-400">🎉 No overdue tasks! Everything is on track.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700/50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Task</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Assignee</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Due Date</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  {data?.overdue_tasks?.map((task: any) => (
+                    <tr key={task.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-xs font-mono text-gray-400">{task.key}</div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">{task.title}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {task.assignee__username || 'Unassigned'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 dark:text-red-400 font-medium">
+                        {new Date(task.due_date).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

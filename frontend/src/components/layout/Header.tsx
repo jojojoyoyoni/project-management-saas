@@ -24,7 +24,7 @@ export default function Header() {
   const userInitial = user?.first_name?.[0]?.toUpperCase() || 'U'
 
   return (
-    <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6">
+    <header className="print:hidden h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6">
       {/* Search Bar */}
       <div className="flex-1 max-w-md">
         <div className="relative">

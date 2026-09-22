@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
-import { orgKeys, getOrganizations, createOrganization, updateOrganization } from '@/api/queries/organizationQueries'
+import { orgKeys, getOrganizations, createOrganization, updateOrganization, getOrgDashboard } from '@/api/queries/organizationQueries'
 import { setActiveOrganization } from '@/store/slices/orgSlice'
 
 export const useOrganizations = () => {
@@ -46,5 +46,14 @@ export const useUpdateOrganization = () => {
       // Refresh the organizations list so the sidebar updates with the new name/logo
       queryClient.invalidateQueries({ queryKey: orgKeys.list() })
     },
+  })
+}
+
+
+export const useOrgDashboard = (orgId: string | null) => {
+  return useQuery({
+    queryKey: ['orgDashboard', orgId],
+    queryFn: () => getOrgDashboard(orgId!),
+    enabled: !!orgId,
   })
 }

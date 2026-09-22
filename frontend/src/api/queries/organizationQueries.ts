@@ -12,14 +12,6 @@ export const getOrganizations = async (): Promise<Organization[]> => {
   return response.results || response // Handle both array and paginated response
 }
 
-// export const createOrganization = async (data: { name: string; description?: string }) => {
-//   const res = await apiClient('/organizations/', {
-//     method: 'POST',
-//     body: JSON.stringify(data),
-//   })
-//   return res // Returns { success, message, organization }
-// }
-// Change to accept FormData
 export const createOrganization = async (data: FormData) => {
   const res = await apiClient('/organizations/', {
     method: 'POST',
@@ -35,4 +27,8 @@ export const updateOrganization = async ({ orgId, data }: { orgId: string, data:
     body: data,
   })
   return res
+}
+
+export const getOrgDashboard = async (orgId: string) => {
+  return apiClient(`/organizations/${orgId}/dashboard/`)
 }
