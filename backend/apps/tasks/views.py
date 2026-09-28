@@ -389,3 +389,52 @@ class TaskCommentViewSet(viewsets.ModelViewSet):
                 )
         
         # NO SECOND serializer.save() HERE!
+
+class TaskAttachmentViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for attachments belonging to a task.
+    URL: /api/projects/<project_id>/tasks/<task_pk>/attachments/
+    """
+    serializer_class = TaskAttachmentSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        project_id = self.kwargs.get("project_id")
+        task_pk = self.kwargs.get("task_pk")
+
+        if not project_id or not task_pk:
+            return TaskAttachment.objects.none()
+
+        return TaskAttachment.objects.filter(
+            task_id=task_pk,
+            task__project_id=project_id,
+            task__project__members=self.request.user,
+        ).select_related("uploaded_by", "task")
+
+    def perform_create(self, serializer):
+        project_id = self.kwargs.get("project_id")
+        task_pk = self.kwargs.get("task_pk")
+        
+        task = Task.objects.filter(
+            id=task_pk,
+            project_id=project_id,
+            project__members=self.request.user,
+        ).first()
+
+        if not task:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You do not have access to this task.")
+
+        # Extract file info from the uploaded file
+        uploaded_file = self.request.FILES.get('file')
+        filename = uploaded_file.name if uploaded_file else "unknown_file"
+        
+        # Calculate file size in bytes
+        file_size = uploaded_file.size if uploaded_file else 0
+
+        serializer.save(
+            task=task,
+            uploaded_by=self.request.user,
+            filename=filename,
+            file_size=file_size,
+        )

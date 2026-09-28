@@ -196,29 +196,6 @@ class TaskCommentSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
-
-class TaskAttachmentSerializer(serializers.ModelSerializer):
-    uploaded_by = UserListSerializer(read_only=True)
-
-    class Meta:
-        model = TaskAttachment
-        fields = [
-            "id",
-            "file",
-            "filename",
-            "file_size",
-            "uploaded_by",
-            "created_at",
-        ]
-        read_only_fields = [
-            "id",
-            "filename",
-            "file_size",
-            "uploaded_by",
-            "created_at",
-        ]
-
-
 class TaskActivitySerializer(serializers.ModelSerializer):
     user = UserListSerializer(read_only=True)
 
@@ -236,5 +213,28 @@ class TaskActivitySerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id",
             "user",
+            "created_at",
+        ]
+
+
+class TaskAttachmentSerializer(serializers.ModelSerializer):
+    uploaded_by = UserListSerializer(read_only=True)
+    file = serializers.FileField(use_url=True) # Ensures the URL is returned
+
+    class Meta:
+        model = TaskAttachment
+        fields = [
+            "id",
+            "file",
+            "filename",
+            "file_size",
+            "uploaded_by",
+            "created_at",
+        ]
+        read_only_fields = [
+            "id",
+            "filename",
+            "file_size",
+            "uploaded_by",
             "created_at",
         ]

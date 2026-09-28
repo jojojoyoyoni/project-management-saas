@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useDeleteTask, useTaskDetails, useUpdateTask } from '@/api/hooks/useTasks'
 import TaskComments from './TaskComments'
 import TaskActivity from './TaskActivity'
+import TaskAttachments from './TaskAttachments'
+
 
 import Button from '@/components/common/Button'
 import Spinner from '@/components/common/Spinner'
@@ -27,7 +29,7 @@ export default function TaskDetail({ projectId, taskId, onClose }: TaskDetailPro
   const [status, setStatus] = useState('to-do')
   const [priority, setPriority] = useState('medium')
 
-  const { data: members } = useProjectMembers(projectId, '')
+  const { data: members } = useProjectMembers(projectId)
   
 
 
@@ -170,10 +172,11 @@ export default function TaskDetail({ projectId, taskId, onClose }: TaskDetailPro
           />
         </div>
 
-         {/* Comments Section */}
-        <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-          <TaskComments projectId={projectId} taskId={taskId} />
-        </div>
+        {/* Comments Section */}
+        <TaskComments projectId={projectId} taskId={taskId} />
+
+        {/* Attachments Section (Separate from Comments) */}
+        <TaskAttachments projectId={projectId} taskId={taskId} />
 
         {/* Activity Log Section */}
         <TaskActivity projectId={projectId} taskId={taskId} />

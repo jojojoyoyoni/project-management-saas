@@ -1,0 +1,26 @@
+FROM python:3.12-slim
+
+# Set environment variables to ensure Python outputs logs in real-time
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Set work directory
+WORKDIR /app
+
+# Install system dependencies for PostgreSQL and build tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first to leverage Docker cache
+COPY requirements/ /app/requirements/
+
+# Install Python dependencies (local.txt includes base.txt)
+RUN pip install --no-cache-dir -r requirements/local.txt
+
+# Copy the rest of the application code
+COPY . /app/
+
+# Run Daphne (Supports HTTP + WebSockets)
+CMD ["daphne", "config.asgi:application", "-b", "0.0.0.0", "-p", "8000"]

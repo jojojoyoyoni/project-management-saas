@@ -88,3 +88,22 @@ export const createTaskStatus = async ({ projectId, statusData }: {
     body: JSON.stringify({ ...statusData, project: projectId }),
   })
 }
+
+export const getTaskAttachments = async (projectId: string, taskId: string) => {
+  const res = await apiClient(`/projects/${projectId}/tasks/${taskId}/attachments/`)
+  return res.results || res
+}
+
+export const uploadTaskAttachment = async ({ projectId, taskId, file }: { 
+  projectId: string; taskId: string; file: File 
+}) => {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('filename', file.name)
+  formData.append('file_size', file.size.toString())
+
+  return apiClient(`/projects/${projectId}/tasks/${taskId}/attachments/`, {
+    method: 'POST',
+    body: formData,
+  })
+}

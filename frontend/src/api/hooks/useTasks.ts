@@ -9,7 +9,9 @@ import {
   getTaskActivities,
   deleteTask,
   getTaskStatuses,
-  createTaskStatus
+  createTaskStatus,
+  getTaskAttachments, 
+  uploadTaskAttachment
 } from '@/api/queries/taskQueries'
 import type { TaskStatus } from '@/types/task'
 
@@ -106,6 +108,25 @@ export const useCreateTaskStatus = (projectId: string) => {
     mutationFn: (statusData: { name: string; color: string }) => createTaskStatus({ projectId, statusData }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['taskStatuses', projectId] })
+    }
+  })
+}
+
+
+export const useTaskAttachments = (projectId: string | null, taskId: string | null) => {
+  return useQuery({
+    queryKey: ['taskAttachments', taskId],
+    queryFn: () => getTaskAttachments(projectId!, taskId!),
+    enabled: !!projectId && !!taskId,
+  })
+}
+
+export const useUploadAttachment = (projectId: string, taskId: string) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (file: File) => uploadTaskAttachment({ projectId, taskId, file }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['taskAttachments', taskId] })
     }
   })
 }

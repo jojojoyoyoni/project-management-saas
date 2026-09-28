@@ -13,3 +13,4 @@ django-debug-toolbar==4.4.6
 # Code quality
 ruff==0.6.9
 black==24.8.0
+

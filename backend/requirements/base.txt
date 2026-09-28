@@ -17,9 +17,10 @@ drf-spectacular==0.27.2
 # Cache
 django-redis==5.4.0
 
-# WebSocket
-channels==4.0.0
-channels-redis==4.2.0
+# WebSocket (Remove strict version pins and add daphne)
+daphne
+channels
+channels-redis
 
 # Celery
 celery==5.4.0
