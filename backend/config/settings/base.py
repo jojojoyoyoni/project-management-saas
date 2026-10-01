@@ -161,24 +161,31 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
-# CHANNEL_LAYERS = {
-#     "default": {
-#         "BACKEND": "channels_redis.core.RedisChannelLayer",
-#         "CONFIG": {
-#             "hosts": [os.environ.get("CHANNELS_REDIS_URL", "redis://localhost:6379/3")],
-#         },
-#     },
-# }
-
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            # CHANGE THIS: Use the tuple format (host, port)
-            "hosts": [("redis", 6379)],
+            "hosts": [
+                {
+                    "address": "redis://redis:6379",
+                    "socket_timeout": 60,         # Increase socket timeout (seconds)
+                    "socket_connect_timeout": 30, # Increase connection timeout
+                    "health_check_interval": 10,  # Send periodic PING to keep connection alive
+                }
+            ],
         },
-    }
+    },
 }
+
+# CHANNEL_LAYERS = {
+#     "default": {
+#         "BACKEND": "channels_redis.core.RedisChannelLayer",
+#         "CONFIG": {
+#             # CHANGE THIS: Use the tuple format (host, port)
+#             "hosts": [("redis", 6379)],
+#         },
+#     }
+# }
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "ProjectFlow API",
