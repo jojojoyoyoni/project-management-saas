@@ -66,5 +66,21 @@ services:
     depends_on:
       - backend
 
+
+    # NEW: Payment Gateway Service
+  payment-gateway:
+    build: 
+      context: ./payment-gateway
+      dockerfile: Dockerfile.dev
+    command: python manage.py runserver 0.0.0.0:8001
+    volumes:
+      - ./payment-gateway:/app
+    ports:
+      - "8001:8001"
+    environment:
+      - STRIPE_SECRET_KEY=sk_test_YOUR_STRIPE_SECRET_KEY
+      - STRIPE_WEBHOOK_SECRET=whsec_YOUR_WEBHOOK_SECRET
+      - INTERNAL_API_KEY=super-secret-gateway-key-123
+
 volumes:
   postgres_data:
