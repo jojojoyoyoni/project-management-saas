@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
-import { orgKeys, getOrganizations, createOrganization, updateOrganization, getOrgDashboard } from '@/api/queries/organizationQueries'
+import { orgKeys, getOrganizations, createOrganization, updateOrganization, getOrgDashboard, createCheckoutSession } from '@/api/queries/organizationQueries'
 import { setActiveOrganization } from '@/store/slices/orgSlice'
 
 export const useOrganizations = () => {
@@ -55,5 +55,13 @@ export const useOrgDashboard = (orgId: string | null) => {
     queryKey: ['orgDashboard', orgId],
     queryFn: () => getOrgDashboard(orgId!),
     enabled: !!orgId,
+  })
+}
+
+
+// Add this hook to the bottom of useOrganizations.ts
+export const useCreateCheckoutSession = () => {
+  return useMutation({
+    mutationFn: (orgId: string) => createCheckoutSession(orgId),
   })
 }

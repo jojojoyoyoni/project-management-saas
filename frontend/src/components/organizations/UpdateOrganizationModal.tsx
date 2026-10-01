@@ -2,12 +2,14 @@ import { useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useUpdateOrganization } from '@/api/hooks/useOrganizations'
+import { useUpdateOrganization, useCreateCheckoutSession} from '@/api/hooks/useOrganizations'
+
 import { apiClient } from '@/api/client'
 import Button from '@/components/common/Button'
 import { FaImage, FaUpload, FaTrash } from 'react-icons/fa6'
 import { useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
+import { FaCrown } from 'react-icons/fa6'
 
 const orgSchema = z.object({
   name: z.string().min(3, 'Organization name must be at least 3 characters'),
@@ -37,6 +39,9 @@ export default function UpdateOrganizationModal({
   const [logoPreview, setLogoPreview] = useState<string>(currentLogo || '')
   const [isDeleting, setIsDeleting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const checkoutMutation = useCreateCheckoutSession()
+
 
   const {
     register,
@@ -83,6 +88,18 @@ export default function UpdateOrganizationModal({
       }
     }
   }
+
+  const handleUpgrade = () => {
+    checkoutMutation.mutate(orgId, {
+      onSuccess: (data) => {
+        if (data.url) {
+          window.location.href = data.url // Redirect to Stripe/Mock URL
+        }
+      }
+    })
+  }
+
+
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -143,6 +160,18 @@ export default function UpdateOrganizationModal({
             {...register('description')}
           />
         </div>
+      </div>
+
+      {/* Upgrade to Pro Box */}
+      <div className="mt-6 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg flex items-center justify-between">
+        <div>
+          <h3 className="font-semibold text-indigo-900 dark:text-indigo-200">Upgrade to Pro</h3>
+          <p className="text-sm text-indigo-600 dark:text-indigo-400">Unlock unlimited projects and members.</p>
+        </div>
+        {/* ADD type="button" HERE! */}
+        <Button type="button" onClick={handleUpgrade} isLoading={checkoutMutation.isPending}>
+          <FaCrown className="mr-2" /> Upgrade
+        </Button>
       </div>
 
       {/* Danger Zone (Moved to Bottom) */}

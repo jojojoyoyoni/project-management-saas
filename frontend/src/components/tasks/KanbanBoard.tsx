@@ -20,7 +20,7 @@ interface KanbanBoardProps {
 export default function KanbanBoard({ projectId }: KanbanBoardProps) {
   const { data, isLoading, isError } = useTasks(projectId)
   const { data: columns } = useTaskStatuses(projectId)
-  const { data: members } = useProjectMembers(projectId, '')
+  const { data: members } = useProjectMembers(projectId)
   const updateStatus = useUpdateTaskStatus()
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -71,6 +71,62 @@ export default function KanbanBoard({ projectId }: KanbanBoardProps) {
     }
   }, [filteredTasks, columns])
 
+  // Group tasks whenever tasks OR columns change
+  useEffect(() => {
+    if (data?.results && columns) {
+      const grouped: Record<string, Task[]> = {}
+      columns.forEach((col: any) => {
+        grouped[col.slug] = []
+      })
+
+      data.results.forEach(task => {
+        const statusSlug = task.status?.slug
+        if (statusSlug && grouped[statusSlug]) {
+          grouped[statusSlug].push(task)
+        }
+      })
+      setLocalTasks(grouped)
+    }
+  }, [data, columns])
+
+  // --- WEBSOCKET LISTENER ---
+  useEffect(() => {
+    // Get the token from localStorage
+    const token = localStorage.getItem('access_token')
+    
+    if (!token) return
+
+    // Attach token as a query parameter
+    const ws = new WebSocket(`ws://localhost:5173/ws/notifications/${projectId}/?token=${token}`)
+    
+    ws.onopen = () => {
+      console.log(`✅ Connected to real-time board for project ${projectId}`)
+    }
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data)
+      
+      if (data.type === 'task_update') {
+        const updatedTask = data.message.task
+        setLocalTasks(prev => {
+          const newState = { ...prev }
+          for (const col in newState) {
+            newState[col] = newState[col].filter(t => String(t.id) !== String(updatedTask.id))
+          }
+          const statusSlug = updatedTask.status?.slug
+          if (statusSlug && newState[statusSlug]) {
+            newState[statusSlug].push(updatedTask)
+          }
+          return newState
+        })
+      }
+    }
+
+    return () => {
+      ws.close()
+    }
+  }, [projectId])
+  
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || !columns) return
@@ -112,6 +168,9 @@ export default function KanbanBoard({ projectId }: KanbanBoardProps) {
 
   if (isLoading || !columns) return <div className="flex justify-center py-12"><Spinner /></div>
   if (isError) return <div className="text-center py-12 text-red-500">Failed to load tasks.</div>
+
+  
+  
 
   return (
     <div className="h-full flex flex-col">

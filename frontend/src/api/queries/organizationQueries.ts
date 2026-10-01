@@ -32,3 +32,12 @@ export const updateOrganization = async ({ orgId, data }: { orgId: string, data:
 export const getOrgDashboard = async (orgId: string) => {
   return apiClient(`/organizations/${orgId}/dashboard/`)
 }
+
+// Add this to the bottom of organizationQueries.ts
+
+export const createCheckoutSession = async (orgId: string) => {
+  const res = await apiClient(`/organizations/${orgId}/create_checkout_session/`, {
+    method: 'POST',
+  })
+  return res // Returns { url: "..." }
+}
