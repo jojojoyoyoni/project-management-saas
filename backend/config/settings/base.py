@@ -8,6 +8,11 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-change-me-abc123xyz")
 DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
+
+# External Payment Gateway Settings
+PAYMENT_GATEWAY_URL = os.environ.get("PAYMENT_GATEWAY_URL", "http://payment-gateway:8001")
+PAYMENT_GATEWAY_KEY = os.environ.get("PAYMENT_GATEWAY_KEY", "super-secret-gateway-key-123")
+
 INSTALLED_APPS = [
     # Django built-in
     "django.contrib.admin",
@@ -21,7 +26,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "corsheaders",
-    "django_filters",           # Correct app name (with 's')
+    "django_filters",
     "drf_spectacular",
     "django_extensions",
     "django_celery_beat",
@@ -156,13 +161,23 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
+# CHANNEL_LAYERS = {
+#     "default": {
+#         "BACKEND": "channels_redis.core.RedisChannelLayer",
+#         "CONFIG": {
+#             "hosts": [os.environ.get("CHANNELS_REDIS_URL", "redis://localhost:6379/3")],
+#         },
+#     },
+# }
+
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [os.environ.get("CHANNELS_REDIS_URL", "redis://localhost:6379/3")],
+            # CHANGE THIS: Use the tuple format (host, port)
+            "hosts": [("redis", 6379)],
         },
-    },
+    }
 }
 
 SPECTACULAR_SETTINGS = {

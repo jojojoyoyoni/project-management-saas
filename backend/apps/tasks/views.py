@@ -1,4 +1,8 @@
 from django.utils import timezone
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+
+
 from apps.notifications.models import Notification
 from rest_framework import status, viewsets, serializers
 from rest_framework.decorators import action
@@ -207,10 +211,28 @@ class TaskViewSet(viewsets.ModelViewSet):
                     task=task,
                     verb=f"assigned you to task: {task.title}"
                 )
+
+        # --- WEBSOCKET BROADCAST FOR KANBAN BOARD ---
+        channel_layer = get_channel_layer()
+        if channel_layer:
+            # Serialize the updated task to send over the socket
+            task_data = TaskDetailSerializer(task, context=self.get_serializer_context()).data
+            
+            # Broadcast to everyone viewing this project
+            async_to_sync(channel_layer.group_send)(
+                f"project_{task.project_id}",
+                {
+                    "type": "send_task_update",
+                    "message": {
+                        "task": task_data
+                    }
+                }
+            )
         
         return Response(
             {"success": True, "task": TaskDetailSerializer(task, context=self.get_serializer_context()).data},
         )
+
     def partial_update(self, request, *args, **kwargs):
         kwargs["partial"] = True
         return self.update(request, *args, **kwargs)

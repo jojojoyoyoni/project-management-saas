@@ -1,4 +1,6 @@
 
+import requests
+
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.conf import settings
@@ -322,3 +324,39 @@ class OrganizationViewSet(viewsets.ModelViewSet):
             "completion_trend": list(trend_data),
             "projects": project_breakdown
         })
+
+    @action(detail=True, methods=["post"])
+    def create_checkout_session(self, request, pk=None):
+        org = self.get_object()
+
+                # FIX: Allow Owner OR Super Admin to upgrade
+        if not org.is_owner(request.user) and not request.user.is_superuser:
+            return Response({"error": "Only the owner or admin can upgrade the plan."}, status=403)
+        
+        # # Ensure only the Org Owner can upgrade
+        # if not org.is_owner(request.user):
+        #     return Response({"error": "Only the owner can upgrade the plan."}, status=403)
+            
+        try:
+            # Call the EXTERNAL Payment Gateway API
+            gateway_url = f"{settings.PAYMENT_GATEWAY_URL}/api/create-checkout-session/"
+            
+            response = requests.post(
+                gateway_url,
+                json={
+                    "org_id": org.id,
+                    "org_name": org.name
+                },
+                headers={
+                    "X-Gateway-Key": settings.PAYMENT_GATEWAY_KEY # Authenticate with the gateway
+                }
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                return Response({"url": data.get("url")})
+            else:
+                return Response({"error": "Gateway request failed."}, status=response.status_code)
+                
+        except requests.exceptions.RequestException as e:
+            return Response({"error": "Cannot connect to Payment Gateway."}, status=503)
